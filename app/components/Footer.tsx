@@ -29,14 +29,14 @@ export default function Footer() {
 
 
   return (
-    <footer className="w-full bg-[#041c16] text-slate-300 text-xs sm:text-sm pt-12 pb-6 border-t border-emerald-950">
+    <footer className="w-full bg-[#15131F] text-slate-300 text-xs sm:text-sm pt-12 pb-6 border-t border-[#2D0C5F]/40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Top 4-Column Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-8 pb-10">
           {/* Column 1: Call Box, Description, Social Icons (~4 cols) */}
           <div className="lg:col-span-4 flex flex-col gap-4">
             {/* Call Us 24/7 Pill Box */}
-            <div className="inline-flex items-center gap-3 border border-slate-700/80 bg-[#062820] px-4 py-2.5 rounded-full w-fit">
+            <div className="inline-flex items-center gap-3 border border-slate-700/80 bg-[#2D0C5F] px-4 py-2.5 rounded-full w-fit">
               <div className="w-8 h-8 rounded-full bg-emerald-900/60 flex items-center justify-center text-emerald-400">
                 <PhoneCall className="w-4 h-4" />
               </div>
@@ -170,7 +170,7 @@ export default function Footer() {
                 />
                 <button
                   type="submit"
-                  className="bg-[#e67300] hover:bg-[#d46600] text-white text-xs font-bold px-4 py-2.5 rounded-r-md transition-colors whitespace-nowrap cursor-pointer"
+                  className="bg-[#EA9219] hover:bg-[#cf7b0f] text-white text-xs font-bold px-4 py-2.5 rounded-r-md transition-colors whitespace-nowrap cursor-pointer"
                 >
                   Subscribe
                 </button>
@@ -201,7 +201,7 @@ export default function Footer() {
           <div className="flex items-center gap-3">
             <button
               onClick={scrollToTop}
-              className="w-8 h-8 rounded-lg bg-[#073027] border border-slate-700/60 flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-500 transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-lg bg-[#4E1C80] border border-slate-700/60 flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-500 transition-colors cursor-pointer"
               aria-label="Scroll to top"
             >
               <ChevronUp className="w-4 h-4" />
@@ -213,15 +213,15 @@ export default function Footer() {
 
           {/* Security Pills */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 border border-slate-700/80 bg-[#062820] px-3 py-1 rounded-lg text-[11px] text-slate-200">
+            <div className="flex items-center gap-1.5 border border-slate-700/80 bg-[#2D0C5F] px-3 py-1 rounded-lg text-[11px] text-slate-200">
               <Lock className="w-3 h-3 text-slate-300" />
               <span>SSL Secure</span>
             </div>
-            <div className="flex items-center gap-1.5 border border-slate-700/80 bg-[#062820] px-3 py-1 rounded-lg text-[11px] text-slate-200">
+            <div className="flex items-center gap-1.5 border border-slate-700/80 bg-[#2D0C5F] px-3 py-1 rounded-lg text-[11px] text-slate-200">
               <Lock className="w-3 h-3 text-slate-300" />
               <span>Encrypted</span>
             </div>
-            <div className="flex items-center gap-1.5 border border-slate-700/80 bg-[#062820] px-3 py-1 rounded-lg text-[11px] text-slate-200">
+            <div className="flex items-center gap-1.5 border border-slate-700/80 bg-[#2D0C5F] px-3 py-1 rounded-lg text-[11px] text-slate-200">
               <CheckCircle2 className="w-3 h-3 text-emerald-400" />
               <span>Verified</span>
             </div>

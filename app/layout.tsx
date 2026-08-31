@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "আম্রপালি | Amarpali Fresh Organic Fruits & Groceries",
-  description: "আপনার পরিবারে সেরা প্রাকৃতিক স্বাদ ও পুষ্টি - আম্রপালি অর্গানিক শপ",
+  title: "Dream Mart | Fresh Organic Fruits & Groceries in Bangladesh",
+  description: "Experience the best organic taste, health, and nutrition with Dream Mart. Order fresh mango, dates, lichi, honey, ghee, and premium groceries online.",
 };
 
 export default function RootLayout({
@@ -29,7 +29,7 @@ export default function RootLayout({
       lang="bn"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#f5f6f8] text-slate-800 selection:bg-emerald-600 selection:text-white font-sans">
+      <body className="min-h-full flex flex-col bg-[#f5f2f7] text-slate-900 selection:bg-emerald-600 selection:text-white font-sans">
         <CartProvider>
           {children}
           <CartDrawer />

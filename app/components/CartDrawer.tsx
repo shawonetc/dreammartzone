@@ -286,7 +286,7 @@ export default function CartDrawer() {
               ) : (
                 <button
                   onClick={() => setCheckoutMode(true)}
-                  className="w-full py-3 bg-[#111111] hover:bg-black text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-colors cursor-pointer text-center"
+                  className="w-full py-3 bg-[#4E1C80] hover:bg-[#2D0C5F] text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-colors cursor-pointer text-center"
                 >
                   Proceed to Checkout
                 </button>

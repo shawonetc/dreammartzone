@@ -35,7 +35,7 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#f8f9fa] text-slate-800">
+      <div className="min-h-screen flex flex-col bg-[#F5F2F7] text-slate-800">
         <Header />
         <main className="flex-1 flex flex-col items-center justify-center p-8">
           <div className="text-center">
@@ -73,7 +73,7 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8f9fa] text-slate-800">
+    <div className="min-h-screen flex flex-col bg-[#F5F2F7] text-slate-800">
       <Header />
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -198,7 +198,7 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
                         addToCart(product, quantity);
                         setIsCartOpen(true);
                       }}
-                      className="flex-1 h-[46px] bg-[#111111] hover:bg-black text-white text-xs sm:text-sm font-bold rounded-lg transition-colors cursor-pointer shadow-2xs tracking-wide"
+                      className="flex-1 h-[46px] bg-[#4E1C80] hover:bg-[#2D0C5F] text-white text-xs sm:text-sm font-bold rounded-lg transition-colors cursor-pointer shadow-2xs tracking-wide"
                     >
                       Order Now
                     </button>
@@ -206,7 +206,7 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
                       onClick={() => {
                         addToCart(product, quantity);
                       }}
-                      className="flex-1 h-[46px] bg-white hover:bg-slate-50 text-slate-900 border border-slate-900 text-xs sm:text-sm font-bold rounded-lg transition-colors cursor-pointer"
+                      className="flex-1 h-[46px] bg-white hover:bg-[#f5f2f7] text-[#4E1C80] border border-[#4E1C80] text-xs sm:text-sm font-bold rounded-lg transition-colors cursor-pointer"
                     >
                       Add to Cart
                     </button>
@@ -268,7 +268,7 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
                 onClick={() => setActiveTab(tab)}
                 className={`pb-3 text-sm sm:text-base font-bold transition-all border-b-2 whitespace-nowrap cursor-pointer ${
                   activeTab === tab
-                    ? "border-slate-900 text-slate-900"
+                    ? "border-[#4E1C80] text-[#4E1C80]"
                     : "border-transparent text-slate-400 hover:text-slate-600"
                 }`}
               >

@@ -76,7 +76,7 @@ export default function Header() {
             />
             <button
               type="submit"
-              className="absolute right-0 top-0 bottom-0 px-4 bg-[#0a1914] text-white rounded-r-full hover:bg-emerald-950 transition-colors flex items-center justify-center cursor-pointer"
+              className="absolute right-0 top-0 bottom-0 px-4 bg-[#151E4A] hover:bg-[#0c122e] text-white rounded-r-full transition-colors flex items-center justify-center cursor-pointer"
             >
               <Search className="w-4 h-4" />
             </button>
@@ -106,7 +106,7 @@ export default function Header() {
           >
             <div className="relative">
               <ShoppingBag className="w-5 h-5 stroke-[1.5]" />
-              <span className="absolute -top-1.5 -right-2.5 bg-[#d9381e] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-2.5 bg-[#EA9219] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                 {cartCount}
               </span>
             </div>
@@ -133,21 +133,21 @@ export default function Header() {
             placeholder="Enter product name..."
             className="w-full py-2 pl-4 pr-10 text-sm bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:border-emerald-600"
           />
-          <button type="submit" className="absolute right-0 top-0 bottom-0 px-3 bg-[#0a1914] text-white rounded-r-full cursor-pointer">
+          <button type="submit" className="absolute right-0 top-0 bottom-0 px-3 bg-[#151E4A] hover:bg-[#0c122e] text-white rounded-r-full cursor-pointer">
             <Search className="w-4 h-4" />
           </button>
         </div>
       </form>
 
-      {/* Navigation Category Bar (Dark Green Background) */}
-      <nav className="bg-[#05231c] text-white text-xs font-semibold overflow-visible relative">
+      {/* Navigation Category Bar (Plum Background) */}
+      <nav className="bg-[#2D0C5F] text-white text-xs font-semibold overflow-visible relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-start gap-5">
           
           {/* Shop By Category Dropdown Button (PC View Only) */}
           <div className="relative hidden md:block py-1.5 shrink-0">
             <button
               onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
-              className="flex items-center gap-2 bg-[#09352b] hover:bg-[#0c4337] px-4 py-1.5 rounded-md text-white border border-emerald-900/60 font-bold transition-all cursor-pointer shadow-xs select-none"
+              className="flex items-center gap-2 bg-[#4E1C80] hover:bg-[#3d1664] px-4 py-1.5 rounded-md text-white border border-[#2D0C5F]/60 font-bold transition-all cursor-pointer shadow-xs select-none"
             >
               <Menu className="w-4 h-4" />
               <span>Shop By Category</span>

@@ -95,7 +95,7 @@ export default function TopCategories() {
         {/* Section Header */}
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <div className="flex items-center gap-2">
-            <div className="w-1.5 h-5 bg-[#062820] rounded-full"></div>
+            <div className="w-1.5 h-5 bg-[#4E1C80] rounded-full"></div>
             <h2 className="text-base sm:text-lg font-bold tracking-wider text-slate-900 uppercase">
               TOP CATEGORIES
             </h2>

@@ -8,7 +8,7 @@ import Footer from "./components/Footer";
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8f9fa] text-slate-800">
+    <div className="min-h-screen flex flex-col bg-[#F5F2F7] text-slate-800">
       {/* Header section with brand logo, search bar, navigation bar */}
       <Header />
 

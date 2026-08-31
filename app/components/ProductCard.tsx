@@ -59,14 +59,14 @@ export default function ProductCard({ product }: ProductCardProps) {
             addToCart(product, 1);
             setIsCartOpen(true);
           }}
-          className="w-full py-2.5 px-4 bg-[#111111] hover:bg-black active:bg-slate-900 text-white text-xs sm:text-sm font-bold rounded-lg transition-colors cursor-pointer text-center shadow-2xs"
+          className="w-full py-2.5 px-4 bg-[#4E1C80] hover:bg-[#2D0C5F] active:bg-[#1d0741] text-white text-xs sm:text-sm font-bold rounded-lg transition-colors cursor-pointer text-center shadow-2xs"
         >
           Buy Now
         </button>
         <button
           type="button"
           onClick={() => addToCart(product, 1)}
-          className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-900 border border-slate-900 text-xs sm:text-sm font-bold rounded-lg transition-colors cursor-pointer text-center"
+          className="w-full py-2.5 px-4 bg-white hover:bg-[#f5f2f7] active:bg-[#eae4f0] text-[#4E1C80] border border-[#4E1C80] text-xs sm:text-sm font-bold rounded-lg transition-colors cursor-pointer text-center"
         >
           Add to Cart
         </button>
