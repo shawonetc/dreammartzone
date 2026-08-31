@@ -10,6 +10,17 @@ import {
 
 export default function Footer() {
   const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setSubscribed(true);
+    setEmail("");
+    setTimeout(() => {
+      setSubscribed(false);
+    }, 5000);
+  };
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -142,21 +153,29 @@ export default function Footer() {
             </p>
 
             {/* Newsletter Input Box */}
-            <form onSubmit={(e) => e.preventDefault()} className="flex items-center w-full max-w-sm pt-1">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Your Email"
-                className="w-full bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-l-md focus:outline-none placeholder:text-slate-400"
-              />
-              <button
-                type="submit"
-                className="bg-[#e67300] hover:bg-[#d46600] text-white text-xs font-bold px-4 py-2.5 rounded-r-md transition-colors whitespace-nowrap cursor-pointer"
-              >
-                Subscribe
-              </button>
-            </form>
+            {subscribed ? (
+              <div className="flex items-center gap-2 text-emerald-400 bg-emerald-950/40 border border-emerald-900/60 px-4 py-3 rounded-lg text-xs font-bold animate-fade-in">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>ধন্যবাদ! আপনার সাবস্ক্রিপশন সফল হয়েছে।</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSubscribe} className="flex items-center w-full max-w-sm pt-1">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Your Email"
+                  className="w-full bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-l-md focus:outline-none placeholder:text-slate-400"
+                />
+                <button
+                  type="submit"
+                  className="bg-[#e67300] hover:bg-[#d46600] text-white text-xs font-bold px-4 py-2.5 rounded-r-md transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  Subscribe
+                </button>
+              </form>
+            )}
           </div>
         </div>
 

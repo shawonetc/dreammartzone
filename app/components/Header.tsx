@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
 import {
   Search,
@@ -35,29 +36,36 @@ const headerCategories = navCategories.slice(0, 5); // Only display top 5 catego
 
 
 export default function Header() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { cartCount, setIsCartOpen } = useCart();
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    router.push(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
+  };
+
   return (
     <header className="w-full bg-white shadow-xs sticky top-0 z-50">
       {/* Top Bar / Brand header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1.5 flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2 cursor-pointer select-none shrink-0">
           <Image
-            src="/logo.png"
+            src="/logo1.png"
             alt="Dream Mart Logo"
             width={300}
             height={90}
             priority
-            className="object-contain h-16 sm:h-24 w-auto"
+            className="object-contain h-10 sm:h-14 w-auto"
           />
         </Link>
 
         {/* Search Bar */}
-        <div className="flex-1 max-w-xl mx-4 hidden md:flex items-center">
+        <form onSubmit={handleSearchSubmit} className="flex-1 max-w-xl mx-4 hidden md:flex items-center">
           <div className="relative w-full flex items-center">
             <input
               type="text"
@@ -67,13 +75,13 @@ export default function Header() {
               className="w-full py-2 pl-4 pr-12 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:border-emerald-600 focus:bg-white transition-all shadow-inner"
             />
             <button
-              type="button"
+              type="submit"
               className="absolute right-0 top-0 bottom-0 px-4 bg-[#0a1914] text-white rounded-r-full hover:bg-emerald-950 transition-colors flex items-center justify-center cursor-pointer"
             >
               <Search className="w-4 h-4" />
             </button>
           </div>
-        </div>
+        </form>
 
         {/* Header Right Actions */}
         <div className="flex items-center gap-4 sm:gap-6 text-slate-700 text-xs font-medium">
@@ -116,28 +124,30 @@ export default function Header() {
       </div>
 
       {/* Mobile Search Bar */}
-      <div className="px-4 pb-3 md:hidden">
+      <form onSubmit={handleSearchSubmit} className="px-4 pb-3 md:hidden">
         <div className="relative w-full flex items-center">
           <input
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Enter product name..."
             className="w-full py-2 pl-4 pr-10 text-sm bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:border-emerald-600"
           />
-          <button className="absolute right-0 top-0 bottom-0 px-3 bg-[#0a1914] text-white rounded-r-full">
+          <button type="submit" className="absolute right-0 top-0 bottom-0 px-3 bg-[#0a1914] text-white rounded-r-full cursor-pointer">
             <Search className="w-4 h-4" />
           </button>
         </div>
-      </div>
+      </form>
 
       {/* Navigation Category Bar (Dark Green Background) */}
       <nav className="bg-[#05231c] text-white text-xs font-semibold overflow-visible relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-start gap-5">
           
           {/* Shop By Category Dropdown Button (PC View Only) */}
-          <div className="relative hidden md:block py-2 shrink-0">
+          <div className="relative hidden md:block py-1.5 shrink-0">
             <button
               onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
-              className="flex items-center gap-2 bg-[#09352b] hover:bg-[#0c4337] px-4 py-2.5 rounded-md text-white border border-emerald-900/60 font-bold transition-all cursor-pointer shadow-xs select-none"
+              className="flex items-center gap-2 bg-[#09352b] hover:bg-[#0c4337] px-4 py-1.5 rounded-md text-white border border-emerald-900/60 font-bold transition-all cursor-pointer shadow-xs select-none"
             >
               <Menu className="w-4 h-4" />
               <span>Shop By Category</span>
@@ -157,7 +167,7 @@ export default function Header() {
                       key={idx}
                       href={cat.href}
                       onClick={() => setIsCategoryMenuOpen(false)}
-                      className="flex items-center justify-between px-4 py-2.5 text-xs sm:text-sm font-bold hover:bg-slate-50 hover:text-emerald-700 transition-colors group"
+                      className="flex items-center justify-between px-4 py-2 text-xs sm:text-sm font-bold hover:bg-slate-50 hover:text-emerald-700 transition-colors group"
                     >
                       <span>{cat.name}</span>
                       <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-700 transition-colors" />
@@ -169,7 +179,7 @@ export default function Header() {
           </div>
 
           {/* Category List */}
-          <div className="flex items-center gap-5 sm:gap-6 py-2.5 overflow-x-auto scrollbar-none flex-1">
+          <div className="flex items-center gap-5 sm:gap-6 py-1.5 overflow-x-auto scrollbar-none flex-1">
             {headerCategories.map((cat, idx) => (
               <Link
                 key={idx}
