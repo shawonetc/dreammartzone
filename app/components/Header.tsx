@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
 import {
   Search,
-  RotateCcw,
+  Truck,
   User,
   Heart,
   ShoppingBag,
@@ -86,7 +86,7 @@ export default function Header() {
         {/* Header Right Actions */}
         <div className="flex items-center gap-4 sm:gap-6 text-slate-700 text-xs font-medium">
           <Link href="/track-order" className="hidden sm:flex flex-col items-center gap-1 hover:text-emerald-700 transition-colors cursor-pointer">
-            <RotateCcw className="w-5 h-5 stroke-[1.5]" />
+            <Truck className="w-5 h-5 stroke-[1.5]" />
             <span>Track Order</span>
           </Link>
           
