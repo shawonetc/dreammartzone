@@ -48,10 +48,10 @@ export default function AnalyticsPage() {
 
   // Map revenue values to SVG point paths
   const maxRevenue = 60000;
-  const svgWidth = 700;
+  const svgWidth = 800;
   const svgHeight = 200;
   const points = chartData.map((d, index) => {
-    const x = (index / (chartData.length - 1)) * (svgWidth - 60) + 30;
+    const x = (index / (chartData.length - 1)) * (svgWidth - 40) + 20;
     const val = activeMetric === "revenue" ? d.revenue : d.orders * 1200;
     const y = svgHeight - (val / maxRevenue) * (svgHeight - 40) - 20;
     return { x, y, data: d };
@@ -226,7 +226,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* SVG Interactive Chart Box */}
-        <div className="relative bg-gradient-to-b from-purple-50/30 to-white rounded-2xl border border-purple-100 p-4 sm:p-6 overflow-hidden">
+        <div className="relative bg-gradient-to-b from-purple-50/30 to-white rounded-2xl border border-purple-100 p-4 sm:p-6 overflow-hidden w-full">
           {/* Chart Header Stats Overlay */}
           {hoveredPointIndex !== null && (
             <div className="mb-4 flex items-center justify-between bg-white/80 backdrop-blur-sm p-3 rounded-xl border border-purple-100 shadow-xs">
@@ -247,8 +247,12 @@ export default function AnalyticsPage() {
             </div>
           )}
 
-          <div className="w-full overflow-x-auto">
-            <svg viewBox="0 0 700 240" className="w-full min-w-[500px] h-60 overflow-visible">
+          <div className="w-full">
+            <svg
+              viewBox="0 0 800 240"
+              preserveAspectRatio="none"
+              className="w-full h-64 sm:h-72 overflow-visible"
+            >
               <defs>
                 {/* Gradient Fill under line */}
                 <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
@@ -266,15 +270,15 @@ export default function AnalyticsPage() {
               {[0, 50, 100, 150].map((gridY, i) => (
                 <g key={i}>
                   <line
-                    x1="20"
+                    x1="0"
                     y1={gridY + 20}
-                    x2="680"
+                    x2="800"
                     y2={gridY + 20}
                     stroke="#e2e8f0"
                     strokeDasharray="4 4"
                     strokeWidth="1"
                   />
-                  <text x="25" y={gridY + 16} fill="#94a3b8" fontSize="10" fontWeight="bold">
+                  <text x="10" y={gridY + 16} fill="#94a3b8" fontSize="10" fontWeight="bold">
                     ৳{((4 - i) * 15).toLocaleString("bn-BD")}k
                   </text>
                 </g>
@@ -353,6 +357,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
 
       {/* Two Column Layout: Category Breakdown & Top Products */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
