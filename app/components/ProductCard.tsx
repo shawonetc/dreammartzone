@@ -24,9 +24,10 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Product Image */}
         <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-3.5 bg-slate-50">
           <Image
-            src={product.image}
+            src={product.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300"}
             alt={product.name}
             fill
+            unoptimized
             className="object-cover group-hover:scale-105 transition-transform duration-500"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />

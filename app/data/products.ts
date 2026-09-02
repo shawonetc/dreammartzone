@@ -432,6 +432,83 @@ export const allCombinedProducts: ProductItem[] = [
   ...allProducts
 ];
 
+export interface CategoryItem {
+  id: string;
+  name: string;
+  bnName?: string;
+  image: string;
+  description?: string;
+}
+
+export const defaultCategories: CategoryItem[] = [
+  {
+    id: "dates",
+    name: "Dates",
+    bnName: "খেজুর",
+    image: "https://images.unsplash.com/photo-1596591606975-97ee5cef3a1e?auto=format&fit=crop&w=300&q=80",
+  },
+  {
+    id: "mango",
+    name: "Mango",
+    bnName: "আম",
+    image: "https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&w=300&q=80",
+  },
+  {
+    id: "lichi",
+    name: "Lichi",
+    bnName: "লিচু",
+    image: "https://pub-fbc89431f7ed4d21a4222f885f3cb56d.r2.dev/demo21/img_6a29705e78cec3.58156451.webp",
+  },
+  {
+    id: "honey",
+    name: "Honey",
+    bnName: "মধু",
+    image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=300&q=80",
+  },
+  {
+    id: "ghee",
+    name: "Ghee",
+    bnName: "ঘি",
+    image: "https://images.unsplash.com/photo-1608686207856-001b95cf60ca?auto=format&fit=crop&w=300&q=80",
+  },
+  {
+    id: "spices",
+    name: "Spices",
+    bnName: "মসলা",
+    image: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=300&q=80",
+  },
+];
+
+export function getStoredCategories(): CategoryItem[] {
+  if (typeof window === "undefined") return defaultCategories;
+  try {
+    const customSaved = localStorage.getItem("amropali_custom_categories");
+    if (customSaved) {
+      return JSON.parse(customSaved);
+    }
+  } catch (err) {
+    console.log(err);
+  }
+  return defaultCategories;
+}
+
+export function getCustomUserProducts(): ProductItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const customSaved = localStorage.getItem("amropali_custom_products");
+    return customSaved ? JSON.parse(customSaved) : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+export function getAllStoredProducts(): ProductItem[] {
+  return getCustomUserProducts();
+}
+
 export function getProductById(id: string): ProductItem | undefined {
-  return allCombinedProducts.find((p) => p.id === id);
+  const custom = getCustomUserProducts();
+  const foundCustom = custom.find((p) => String(p.id) === String(id));
+  if (foundCustom) return foundCustom;
+  return allCombinedProducts.find((p) => String(p.id) === String(id));
 }

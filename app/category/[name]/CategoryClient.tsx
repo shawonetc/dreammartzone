@@ -7,7 +7,8 @@ import Header from "../../components/Header";
 import FeaturesBanner from "../../components/FeaturesBanner";
 import Footer from "../../components/Footer";
 import ProductCard from "../../components/ProductCard";
-import { allCombinedProducts } from "../../data/products";
+import { getCustomUserProducts, ProductItem } from "../../data/products";
+import { supabase } from "../../lib/supabaseClient";
 import { ShoppingBag } from "lucide-react";
 
 export default function CategoryClient() {
@@ -15,17 +16,44 @@ export default function CategoryClient() {
   const rawCategoryName = params?.name as string;
   const decodedCategory = rawCategoryName ? decodeURIComponent(rawCategoryName) : "";
 
-  // Normalize category name comparison (e.g., matching "Dates (খেজুর)" with "Dates")
+  const [products, setProducts] = React.useState<ProductItem[]>([]);
+
+  React.useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    const local = getCustomUserProducts();
+    try {
+      const { data, error } = await supabase.from("products").select("*");
+      if (!error && data && data.length > 0) {
+        const merged = [...data];
+        local.forEach((lp) => {
+          if (!merged.some((p) => String(p.id) === String(lp.id))) {
+            merged.unshift(lp);
+          }
+        });
+        setProducts(merged);
+      } else {
+        setProducts(local);
+      }
+    } catch (err) {
+      setProducts(local);
+    }
+  };
+
+  // Normalize category name comparison (e.g., matching "Dates (আজওয়া)" with "Dates")
   const getCleanCategoryKey = (catStr: string) => {
+    if (!catStr) return "";
     return catStr.split("(")[0].trim().toLowerCase();
   };
 
   const targetKey = getCleanCategoryKey(decodedCategory);
 
   // Filter products belonging to this category
-  const filteredProducts = allCombinedProducts.filter((product) => {
-    const productKey = getCleanCategoryKey(product.category);
-    return productKey === targetKey || product.category.toLowerCase().includes(targetKey);
+  const filteredProducts = products.filter((product) => {
+    const productKey = getCleanCategoryKey(product.category || "");
+    return productKey === targetKey || product.category?.toLowerCase().includes(targetKey);
   });
 
   return (

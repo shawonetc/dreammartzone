@@ -7,23 +7,49 @@ import Header from "../components/Header";
 import FeaturesBanner from "../components/FeaturesBanner";
 import Footer from "../components/Footer";
 import ProductCard from "../components/ProductCard";
-import { allCombinedProducts } from "../data/products";
+import { getCustomUserProducts, ProductItem } from "../data/products";
+import { supabase } from "../lib/supabaseClient";
 import { ShoppingBag, ListFilter } from "lucide-react";
 
 function ShopContent() {
   const searchParams = useSearchParams();
   const searchQuery = searchParams?.get("search") || "";
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [products, setProducts] = useState<ProductItem[]>([]);
+
+  React.useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    const local = getCustomUserProducts();
+    try {
+      const { data, error } = await supabase.from("products").select("*");
+      if (!error && data && data.length > 0) {
+        const merged = [...data];
+        local.forEach((lp) => {
+          if (!merged.some((p) => String(p.id) === String(lp.id))) {
+            merged.unshift(lp);
+          }
+        });
+        setProducts(merged);
+      } else {
+        setProducts(local);
+      }
+    } catch (err) {
+      setProducts(local);
+    }
+  };
 
   // Get unique categories list
-  const categoriesList = ["All", ...Array.from(new Set(allCombinedProducts.map((p) => p.category)))];
+  const categoriesList = ["All", ...Array.from(new Set(products.map((p) => p.category)))];
 
   // Filter products by selected category and search query
-  const filteredProducts = allCombinedProducts.filter((product) => {
-    const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
+  const filteredProducts = products.filter((product) => {
+    const matchesCategory = selectedCategory === "All" || product.category?.toLowerCase() === selectedCategory.toLowerCase();
     const matchesSearch = !searchQuery.trim() || 
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (product.shortDescription && product.shortDescription.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });

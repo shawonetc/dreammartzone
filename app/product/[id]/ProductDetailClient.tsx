@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Header from "../../components/Header";
 import FeaturesBanner from "../../components/FeaturesBanner";
 import Footer from "../../components/Footer";
-import { getProductById, allCombinedProducts } from "../../data/products";
+import { getProductById, allCombinedProducts, ProductItem } from "../../data/products";
 import ProductCard from "../../components/ProductCard";
 import { useCart } from "../../context/CartContext";
 import {
@@ -19,12 +19,31 @@ import {
   ChevronUp
 } from "lucide-react";
 
+import { supabase } from "../../lib/supabaseClient";
+
 interface ProductDetailClientProps {
   id: string;
 }
 
 export default function ProductDetailClient({ id }: ProductDetailClientProps) {
-  const product = getProductById(id);
+  const [product, setProduct] = useState<ProductItem | undefined>(() => getProductById(id));
+
+  useEffect(() => {
+    const fetchSingle = async () => {
+      const found = getProductById(id);
+      if (found) {
+        setProduct(found);
+        return;
+      }
+      try {
+        const { data } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
+        if (data) setProduct(data);
+      } catch (e) {
+        console.log("Not found");
+      }
+    };
+    fetchSingle();
+  }, [id]);
 
   const [quantity, setQuantity] = useState(1);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
@@ -55,9 +74,9 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
   }
 
   // Fallback images if not provided
-  const imagesList = product.images && product.images.length > 0
-    ? product.images
-    : [product.image];
+  const mainCover = product.image || (product.images && product.images[0]) || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400";
+  const rawList = product.images && product.images.length > 0 ? product.images : [mainCover];
+  const imagesList = mainCover && !rawList.includes(mainCover) ? [mainCover, ...rawList] : rawList;
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
@@ -81,7 +100,7 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
         <nav className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 mb-6 font-medium">
           <Link href="/" className="hover:text-emerald-700 transition-colors">Home</Link>
           <span>/</span>
-          <span className="text-slate-400 capitalize">{product.category.toLowerCase()}</span>
+          <span className="text-slate-400 capitalize">{product.category ? product.category.toLowerCase() : "Product"}</span>
           <span>/</span>
           <span className="text-slate-900 truncate font-semibold">{product.name}</span>
         </nav>
@@ -104,9 +123,10 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
                       }`}
                     >
                       <Image
-                        src={imgUrl}
+                        src={imgUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400"}
                         alt={`${product.name} thumbnail ${idx + 1}`}
                         fill
+                        unoptimized
                         className="object-cover"
                         sizes="64px"
                       />
@@ -118,10 +138,11 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
               {/* Main Image */}
               <div className="relative flex-1 aspect-square sm:aspect-[4/3] md:aspect-square bg-slate-50 rounded-2xl overflow-hidden border border-slate-100 shadow-2xs">
                 <Image
-                  src={imagesList[activeImageIdx]}
+                  src={imagesList[activeImageIdx] || mainCover}
                   alt={product.name}
                   fill
                   priority
+                  unoptimized
                   className="object-cover"
                   sizes="(max-width: 640px) 100vw, 500px"
                 />

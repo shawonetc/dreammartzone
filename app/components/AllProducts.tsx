@@ -4,23 +4,34 @@ import React, { useState, useEffect } from "react";
 import ProductCard, { ProductItem } from "./ProductCard";
 import { ShoppingCart } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
-import { allCombinedProducts as fallbackAll } from "../data/products";
+import { getAllStoredProducts } from "../data/products";
 
 export default function AllProducts() {
-  const [productList, setProductList] = useState<ProductItem[]>(fallbackAll);
+  const [productList, setProductList] = useState<ProductItem[]>([]);
 
   useEffect(() => {
     fetchAllProducts();
   }, []);
 
   const fetchAllProducts = async () => {
+    const localStored = getAllStoredProducts();
+
     try {
       const { data, error } = await supabase.from("products").select("*");
       if (!error && data && data.length > 0) {
-        setProductList(data);
+        // Merge Supabase products with local stored custom products
+        const merged = [...data];
+        localStored.forEach((lp) => {
+          if (!merged.some((p) => String(p.id) === String(lp.id))) {
+            merged.unshift(lp);
+          }
+        });
+        setProductList(merged);
+      } else {
+        setProductList(localStored);
       }
     } catch (err) {
-      console.log("Supabase fetch fallback to local data");
+      setProductList(localStored);
     }
   };
 
@@ -36,11 +47,17 @@ export default function AllProducts() {
         </div>
 
         {/* 5 Column Grid on Desktop */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
-          {productList.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {productList.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
+            {productList.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-8 text-center max-w-md mx-auto">
+            <p className="text-slate-500 font-medium text-sm">কোনো প্রোডাক্ট যোগ করা হয়নি। অ্যাডমিন প্যানেল থেকে প্রোডাক্ট এড করুন।</p>
+          </div>
+        )}
       </div>
     </section>
   );

@@ -18,6 +18,7 @@ import {
   Search,
   Menu,
   X,
+  FolderTree,
   ShieldAlert,
   Loader2
 } from "lucide-react";
@@ -92,6 +93,7 @@ export default function AdminLayout({
   const navItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard, category: "OVERVIEW" },
     { name: "Analytics", href: "/admin/analytics", icon: BarChart2, category: "OVERVIEW" },
+    { name: "Categories", href: "/admin/categories", icon: FolderTree, category: "MANAGEMENT" },
     { name: "Products", href: "/admin/products", icon: Package, category: "MANAGEMENT" },
     { name: "Orders", href: "/admin/orders", icon: ShoppingBag, category: "MANAGEMENT" },
     { name: "Users", href: "/admin/users", icon: Users, category: "MANAGEMENT" },
