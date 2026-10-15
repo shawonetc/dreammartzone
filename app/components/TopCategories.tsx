@@ -5,15 +5,25 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
-import { CategoryItem, getStoredCategories } from "../data/products";
+import { CategoryItem, defaultCategories, getStoredCategories } from "../data/products";
 
-export default function TopCategories() {
-  const [categoriesList, setCategoriesList] = useState<CategoryItem[]>([]);
+interface TopCategoriesProps {
+  initialCategories?: CategoryItem[];
+}
+
+export default function TopCategories({ initialCategories }: TopCategoriesProps) {
+  const [categoriesList, setCategoriesList] = useState<CategoryItem[]>(() => {
+    if (initialCategories && initialCategories.length > 0) return initialCategories;
+    return getStoredCategories();
+  });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    // Only re-fetch if initialCategories were not provided by the server
+    if (!initialCategories || initialCategories.length === 0) {
+      fetchCategories();
+    }
+  }, [initialCategories]);
 
   const fetchCategories = async () => {
     const localCats = getStoredCategories();
@@ -110,7 +120,7 @@ export default function TopCategories() {
                 </div>
                 {/* Category Title */}
                 <h3 className="text-xs font-semibold text-slate-800 group-hover/card:text-emerald-700 transition-colors line-clamp-1">
-                  {category.name} {category.bnName ? `(${category.bnName})` : ""}
+                  {category.name}
                 </h3>
               </Link>
             ))}

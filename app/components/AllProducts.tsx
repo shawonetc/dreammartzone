@@ -1,17 +1,27 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import ProductCard, { ProductItem } from "./ProductCard";
+import ProductCard from "./ProductCard";
 import { ShoppingCart } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
-import { getAllStoredProducts } from "../data/products";
+import { ProductItem, getAllStoredProducts } from "../data/products";
 
-export default function AllProducts() {
-  const [productList, setProductList] = useState<ProductItem[]>([]);
+interface AllProductsProps {
+  initialProducts?: ProductItem[];
+}
+
+export default function AllProducts({ initialProducts = [] }: AllProductsProps) {
+  const [productList, setProductList] = useState<ProductItem[]>(() => {
+    if (initialProducts && initialProducts.length > 0) return initialProducts;
+    return getAllStoredProducts();
+  });
 
   useEffect(() => {
-    fetchAllProducts();
-  }, []);
+    // Only fetch if initialProducts were not passed
+    if (!initialProducts || initialProducts.length === 0) {
+      fetchAllProducts();
+    }
+  }, [initialProducts]);
 
   const fetchAllProducts = async () => {
     const localStored = getAllStoredProducts();
@@ -19,7 +29,6 @@ export default function AllProducts() {
     try {
       const { data, error } = await supabase.from("products").select("*");
       if (!error && data && data.length > 0) {
-        // Merge Supabase products with local stored custom products
         const merged = [...data];
         localStored.forEach((lp) => {
           if (!merged.some((p) => String(p.id) === String(lp.id))) {

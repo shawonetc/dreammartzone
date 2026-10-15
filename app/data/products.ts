@@ -248,7 +248,7 @@ export const allProducts: ProductItem[] = [
     name: "ঘরের মতো খাঁটি আচার | স্বাদের অনন্য অভিজ্ঞতা",
     price: "700",
     image: "https://images.unsplash.com/photo-1628088062854-d1870b4553da?auto=format&fit=crop&w=400&q=80",
-    category: "Pickle (আচার)",
+    category: "Pickle",
     brand: "Home Made",
     shortDescription: "সম্পূর্ণ ঘরে তৈরি খাঁটি আচার। কোনো ধরনের কৃত্রিম প্রিজারভেটিভ নেই।",
     longDescription: "আমাদের তৈরি ঘরের খাঁটি আচার খাঁটি সরিষার তেল ও মসলার মিশ্রণে তৈরি করা হয়। এটি খাবারের রুচি বাড়ায় বহুগুণ।",
@@ -476,6 +476,18 @@ export const defaultCategories: CategoryItem[] = [
     name: "Spices",
     bnName: "মসলা",
     image: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=300&q=80",
+  },
+  {
+    id: "mustard-oil",
+    name: "Mustard Oil",
+    bnName: "সরিষার তেল",
+    image: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=300&q=80",
+  },
+  {
+    id: "pickle",
+    name: "Pickle",
+    bnName: "আচার",
+    image: "https://images.unsplash.com/photo-1628088062854-d1870b4553da?auto=format&fit=crop&w=300&q=80",
   },
 ];
 

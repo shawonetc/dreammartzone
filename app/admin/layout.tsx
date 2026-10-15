@@ -20,7 +20,8 @@ import {
   X,
   FolderTree,
   ShieldAlert,
-  Loader2
+  Loader2,
+  SlidersHorizontal
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -95,6 +96,7 @@ export default function AdminLayout({
     { name: "Analytics", href: "/admin/analytics", icon: BarChart2, category: "OVERVIEW" },
     { name: "Categories", href: "/admin/categories", icon: FolderTree, category: "MANAGEMENT" },
     { name: "Products", href: "/admin/products", icon: Package, category: "MANAGEMENT" },
+    { name: "Hero Banners", href: "/admin/banners", icon: SlidersHorizontal, category: "MANAGEMENT" },
     { name: "Orders", href: "/admin/orders", icon: ShoppingBag, category: "MANAGEMENT" },
     { name: "Users", href: "/admin/users", icon: Users, category: "MANAGEMENT" },
     { name: "Notifications", href: "/admin/notifications", icon: Bell, category: "SYSTEM" },

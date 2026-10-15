@@ -27,9 +27,9 @@ const navCategories = [
   { name: "Nuts & Seeds", href: "/category/Nuts & Seeds", hasDropdown: true },
   { name: "Beverage", href: "/category/Beverage", hasDropdown: true },
   { name: "Flours & Lentils", href: "/category/Flours & Lentils", hasDropdown: false },
-  { name: "Pickle (আচার)", href: "/category/Pickle (আচার)", hasDropdown: false },
-  { name: "Lichi (লিচু)", href: "/category/Lichi (লিচু)", hasDropdown: false },
-  { name: "Rice (চাল)", href: "/category/Rice (চাল)", hasDropdown: false },
+  { name: "Pickle", href: "/category/Pickle", hasDropdown: false },
+  { name: "Lichi", href: "/category/Lichi", hasDropdown: false },
+  { name: "Rice", href: "/category/Rice", hasDropdown: false },
 ];
 
 const headerCategories = navCategories.slice(0, 5); // Only display top 5 categories in the header bar

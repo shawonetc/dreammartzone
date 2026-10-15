@@ -61,7 +61,9 @@ export default function Footer() {
             <div className="flex items-center gap-2.5 pt-1">
               {/* Facebook */}
               <a
-                href="#"
+                href="https://www.facebook.com/dreammart21"
+                target="_blank"
+                rel="noopener noreferrer"
                 aria-label="Facebook"
                 className="w-8 h-8 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-emerald-400 hover:text-slate-950 transition-colors shadow-xs"
               >
@@ -197,17 +199,29 @@ export default function Footer() {
 
         {/* Bottom Bar: Copyright & Security Pills */}
         <div className="border-t border-slate-700/40 pt-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-          {/* Scroll to Top + Copyright */}
-          <div className="flex items-center gap-3">
+          {/* Scroll to Top + Copyright + Developer */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-slate-300 text-xs">
             <button
               onClick={scrollToTop}
-              className="w-8 h-8 rounded-lg bg-[#4E1C80] border border-slate-700/60 flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-500 transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-lg bg-[#4E1C80] border border-slate-700/60 flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-500 transition-colors cursor-pointer shrink-0"
               aria-label="Scroll to top"
             >
               <ChevronUp className="w-4 h-4" />
             </button>
-            <span className="text-slate-300 text-xs">
+            <span>
               © {new Date().getFullYear()} Dream Mart. All rights reserved.
+            </span>
+            <span className="hidden sm:inline text-slate-600">•</span>
+            <span className="flex items-center gap-1 text-slate-300">
+              Developed by{" "}
+              <a
+                href="https://demo-shawon.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-[#f2b51d] hover:text-amber-300 transition-colors underline underline-offset-4 decoration-amber-400/40 hover:decoration-amber-300 cursor-pointer"
+              >
+                Shawon
+              </a>
             </span>
           </div>
 
