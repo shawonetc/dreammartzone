@@ -16,7 +16,10 @@ import {
   PhoneCall,
   ChevronRight,
   X,
+  ShieldCheck,
+  LogOut,
 } from "lucide-react";
+import { supabase } from "../lib/supabaseClient";
 
 const navCategories = [
   { name: "Mango", href: "/category/Mango", hasDropdown: false },
@@ -34,13 +37,54 @@ const navCategories = [
 
 const headerCategories = navCategories.slice(0, 5); // Only display top 5 categories in the header bar
 
-
 export default function Header() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const { cartCount, setIsCartOpen } = useCart();
+
+  React.useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email) {
+        setUserEmail(session.user.email);
+      } else {
+        const demoAuth = typeof window !== "undefined" && localStorage.getItem("dream_admin_auth");
+        if (demoAuth === "true") {
+          setUserEmail("Admin");
+        }
+      }
+    };
+    fetchUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user?.email) {
+        setUserEmail(session.user.email);
+      } else {
+        const demoAuth = typeof window !== "undefined" && localStorage.getItem("dream_admin_auth");
+        if (demoAuth === "true") {
+          setUserEmail("Admin");
+        } else {
+          setUserEmail(null);
+        }
+      }
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("dream_admin_auth");
+    }
+    setUserEmail(null);
+    router.push("/signin");
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,10 +134,24 @@ export default function Header() {
             <span>Track Order</span>
           </Link>
           
-          <Link href="/signin" className="flex flex-col items-center gap-1 hover:text-emerald-700 transition-colors cursor-pointer">
-            <User className="w-5 h-5 stroke-[1.5]" />
-            <span>Sign In</span>
-          </Link>
+          {userEmail ? (
+            <div className="relative group">
+              <Link href="/admin" className="flex flex-col items-center gap-1 text-[#4E1C80] hover:text-[#2D0C5F] transition-colors cursor-pointer">
+                <div className="relative">
+                  <ShieldCheck className="w-5 h-5 stroke-[2] text-[#4E1C80]" />
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></span>
+                </div>
+                <span className="font-bold text-[11px] max-w-[80px] truncate text-center">
+                  Admin Panel
+                </span>
+              </Link>
+            </div>
+          ) : (
+            <Link href="/signin" className="flex flex-col items-center gap-1 hover:text-emerald-700 transition-colors cursor-pointer">
+              <User className="w-5 h-5 stroke-[1.5]" />
+              <span>Sign In</span>
+            </Link>
+          )}
           
           <Link href="/wishlist" className="hidden sm:flex flex-col items-center gap-1 hover:text-emerald-700 transition-colors cursor-pointer">
             <Heart className="w-5 h-5 stroke-[1.5]" />
@@ -225,6 +283,41 @@ export default function Header() {
                   <ChevronRight className="w-4 h-4 text-slate-400" />
                 </Link>
               ))}
+            </div>
+
+            {/* Mobile Drawer Auth Actions */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-col gap-2">
+              {userEmail ? (
+                <>
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="w-full py-2.5 px-4 bg-[#4E1C80] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Admin Panel</span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleSignOut();
+                    }}
+                    className="w-full py-2 px-4 bg-white border border-rose-200 text-rose-600 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-rose-50"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/signin"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full py-2.5 px-4 bg-[#4E1C80] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Sign In / Register</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>

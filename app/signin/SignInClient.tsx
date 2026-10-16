@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../components/Header";
 import FeaturesBanner from "../components/FeaturesBanner";
 import Footer from "../components/Footer";
@@ -11,6 +11,8 @@ import { supabase } from "../lib/supabaseClient";
 
 export default function SignInClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTarget = searchParams.get("redirect") || "/admin";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -25,55 +27,77 @@ export default function SignInClient() {
     setErrorMessage("");
     setSuccessMessage("");
 
+    const trimmedEmail = email.trim();
+
     try {
       if (isLogin) {
         // Handle Sign In with Supabase
         const { data, error } = await supabase.auth.signInWithPassword({
-          email,
+          email: trimmedEmail,
           password,
         });
 
         if (error) {
           // If auth error or fallback for demo admin@dreammart.com
-          if (email.toLowerCase() === "admin@dreammart.com") {
+          if (trimmedEmail.toLowerCase() === "admin@dreammart.com") {
             if (typeof window !== "undefined") {
               localStorage.setItem("dream_admin_auth", "true");
             }
             setSuccessMessage("Admin login successful! Redirecting to Admin Dashboard...");
             setTimeout(() => {
-              router.push("/admin");
+              router.push(redirectTarget);
             }, 1000);
           } else {
-            setErrorMessage(error.message || "Failed to sign in. Please check your credentials.");
+            let userFriendlyMsg = error.message || "Failed to sign in. Please check your credentials.";
+            if (error.message.includes("Email not confirmed")) {
+              userFriendlyMsg = "Email not confirmed! Supabase Dashboard > Authentication > Providers > Email এ গিয়ে 'Confirm email' বন্ধ (toggle off) করুন, অথবা আপনার ইনবক্স চেক করে ইমেল ভেরিফাই করুন।";
+            } else if (error.message.includes("Invalid login credentials")) {
+              userFriendlyMsg = "ভুল ইমেল বা পাসওয়ার্ড (Invalid credentials)। Supabase-এ দেওয়া সঠিক ইমেল ও পাসওয়ার্ড দিন।";
+            } else if (error.message.includes("Failed to fetch") || error.message.includes("fetch failed")) {
+              userFriendlyMsg = "Supabase সার্ভারে সংযোগ করা যাচ্ছে না। অনুগ্রহ করে ইন্টারনেট ও Supabase URL চেক করুন।";
+            }
+            setErrorMessage(userFriendlyMsg);
           }
         } else {
-          setSuccessMessage("Successfully signed in!");
-          if (email.toLowerCase() === "admin@dreammart.com") {
-            if (typeof window !== "undefined") {
-              localStorage.setItem("dream_admin_auth", "true");
-            }
-            router.push("/admin");
-          } else {
-            router.push("/");
+          setSuccessMessage("Successfully signed in! Redirecting...");
+          if (typeof window !== "undefined") {
+            localStorage.setItem("dream_admin_auth", "true");
           }
+          setTimeout(() => {
+            router.push(redirectTarget);
+          }, 1000);
         }
       } else {
         // Handle Sign Up with Supabase
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: trimmedEmail,
           password,
           options: {
             data: {
-              full_name: name,
+              full_name: name.trim(),
             },
           },
         });
 
         if (error) {
-          setErrorMessage(error.message);
+          let userFriendlyMsg = error.message;
+          if (error.message.includes("rate limit")) {
+            userFriendlyMsg = "ইমেইল লিমিট শেষ (Rate limit exceeded)। Supabase Dashboard-এ Authentication > Providers > Email থেকে 'Confirm email' বন্ধ করুন অথবা সরাসরি Authentication > Users থেকে User যোগ করুন।";
+          }
+          setErrorMessage(userFriendlyMsg);
         } else {
-          setSuccessMessage("Account created successfully! You can now sign in.");
-          setIsLogin(true);
+          if (data?.session) {
+            setSuccessMessage("Account created & logged in! Redirecting...");
+            if (typeof window !== "undefined") {
+              localStorage.setItem("dream_admin_auth", "true");
+            }
+            setTimeout(() => {
+              router.push(redirectTarget);
+            }, 1000);
+          } else {
+            setSuccessMessage("Account created successfully! You can now sign in.");
+            setIsLogin(true);
+          }
         }
       }
     } catch (err: any) {

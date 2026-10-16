@@ -46,7 +46,7 @@ export default function AdminLayout({
         setIsAuthenticated(true);
       } else {
         setIsAuthenticated(false);
-        router.push("/signin");
+        router.push("/signin?redirect=/admin");
       }
     };
 
@@ -59,7 +59,7 @@ export default function AdminLayout({
         const demoAuth = typeof window !== "undefined" && localStorage.getItem("dream_admin_auth");
         if (demoAuth !== "true") {
           setIsAuthenticated(false);
-          router.push("/signin");
+          router.push("/signin?redirect=/admin");
         }
       }
     });
