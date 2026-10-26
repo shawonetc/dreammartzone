@@ -8,6 +8,7 @@ import Footer from "./components/Footer";
 import { supabase } from "./lib/supabaseClient";
 import { BannerItem, defaultBanners } from "./data/banners";
 import { CategoryItem, defaultCategories, ProductItem, allCombinedProducts } from "./data/products";
+import { defaultSettings, fetchStoreSettings, StoreSettings } from "./data/settings";
 
 // Ensure fresh data from Supabase on every page request / refresh
 export const dynamic = "force-dynamic";
@@ -17,9 +18,10 @@ export default async function Home() {
   let banners: BannerItem[] = defaultBanners;
   let categories: CategoryItem[] = defaultCategories;
   let products: ProductItem[] = allCombinedProducts;
+  let settings: StoreSettings = defaultSettings;
 
   try {
-    const [bannersRes, categoriesRes, productsRes] = await Promise.all([
+    const [bannersRes, categoriesRes, productsRes, settingsRes] = await Promise.all([
       supabase
         .from("banners")
         .select("*")
@@ -31,16 +33,20 @@ export default async function Home() {
       supabase
         .from("products")
         .select("*"),
+      fetchStoreSettings(),
     ]);
 
     if (bannersRes.data && bannersRes.data.length > 0) {
       banners = bannersRes.data;
     }
-    if (categoriesRes.data && categoriesRes.data.length > 0) {
+    if (!categoriesRes.error && categoriesRes.data) {
       categories = categoriesRes.data;
     }
     if (productsRes.data && productsRes.data.length > 0) {
       products = productsRes.data;
+    }
+    if (settingsRes) {
+      settings = settingsRes;
     }
   } catch (err) {
     console.warn("Server-side Supabase pre-fetch fallback:", err);
@@ -61,7 +67,7 @@ export default async function Home() {
 
         {/* Popular Category Showcase Section */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <FeaturedProducts initialProducts={products} />
+          <FeaturedProducts initialProducts={products} initialPopularSettings={settings.popularCategory} />
         </div>
 
         {/* All Products 5-column Grid Section */}

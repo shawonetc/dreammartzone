@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useCart } from "../context/CartContext";
 import { X, Trash2, Minus, Plus, ShoppingBag, Send } from "lucide-react";
 import Image from "next/image";
+import { getStoredSettings } from "../data/settings";
 
 export default function CartDrawer() {
   const {
@@ -56,7 +57,9 @@ export default function CartDrawer() {
       `Thank you!`;
 
     const encodedText = encodeURIComponent(message);
-    window.open(`https://wa.me/8801961363543?text=${encodedText}`, "_blank");
+    const storeNumber = (getStoredSettings().contact?.whatsapp || "01834498477").replace(/\D/g, "");
+    const formattedNumber = storeNumber.startsWith("01") ? `88${storeNumber}` : storeNumber;
+    window.open(`https://wa.me/${formattedNumber}?text=${encodedText}`, "_blank");
 
     setOrderPlaced(true);
     setTimeout(() => {

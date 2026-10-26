@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/app/lib/supabaseClient";
 import { CategoryItem, defaultCategories, getStoredCategories, getCustomUserProducts } from "@/app/data/products";
-import { Plus, Edit, Trash2, Search, Database, CheckCircle2, X, UploadCloud, FolderTree, Tag } from "lucide-react";
+import { getStoredSettings, saveStoredSettings, fetchStoreSettings, PopularCategorySettings, defaultSettings } from "@/app/data/settings";
+import { Plus, Edit, Trash2, Search, Database, CheckCircle2, X, UploadCloud, FolderTree, Tag, Flame } from "lucide-react";
 
 export default function CategoriesAdminPage() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
@@ -15,6 +16,11 @@ export default function CategoriesAdminPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Showcase Header Modal state
+  const [isShowcaseModalOpen, setIsShowcaseModalOpen] = useState(false);
+  const [showcaseForm, setShowcaseForm] = useState<PopularCategorySettings>(defaultSettings.popularCategory);
+  const [savingShowcase, setSavingShowcase] = useState(false);
 
   // Drag and drop state & refs
   const [isDragging, setIsDragging] = useState(false);
@@ -36,25 +42,43 @@ export default function CategoriesAdminPage() {
 
   useEffect(() => {
     fetchCategories();
+    fetchStoreSettings().then((s) => {
+      if (s?.popularCategory) {
+        setShowcaseForm(s.popularCategory);
+      }
+    });
   }, []);
+
+  const handleSaveShowcase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingShowcase(true);
+    try {
+      const current = await fetchStoreSettings();
+      const updated = {
+        ...current,
+        popularCategory: showcaseForm,
+      };
+      await saveStoredSettings(updated);
+      showToast("Popular Category showcase header updated successfully! 🎉");
+      setIsShowcaseModalOpen(false);
+    } catch (err) {
+      showToast("Failed to save showcase header.");
+    } finally {
+      setSavingShowcase(false);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase.from("categories").select("*");
-      
-      const localCategories = getStoredCategories();
 
-      if (!error && data && data.length > 0) {
-        const merged = [...data];
-        localCategories.forEach((lc) => {
-          if (!merged.some((c) => c.id === lc.id)) {
-            merged.push(lc);
-          }
-        });
-        setCategories(merged);
+      if (!error && data) {
+        setCategories(data);
         setDbSynced(true);
+        localStorage.setItem("amropali_custom_categories", JSON.stringify(data));
       } else {
+        const localCategories = getStoredCategories();
         setCategories(localCategories);
       }
     } catch (err) {
@@ -182,10 +206,16 @@ export default function CategoriesAdminPage() {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this category?")) return;
+    const catToDelete = categories.find((c) => c.id === id);
+    const catName = catToDelete?.name || id;
+
+    if (!confirm(`Are you sure you want to remove/delete the category "${catName}"?`)) return;
 
     try {
-      await supabase.from("categories").delete().eq("id", id);
+      const { error } = await supabase.from("categories").delete().eq("id", id);
+      if (error) {
+        console.warn("Supabase category delete note:", error.message);
+      }
     } catch (err) {
       console.log("Deleted locally");
     }
@@ -193,7 +223,62 @@ export default function CategoriesAdminPage() {
     const updatedList = categories.filter((c) => c.id !== id);
     setCategories(updatedList);
     localStorage.setItem("amropali_custom_categories", JSON.stringify(updatedList));
-    showToast("Category deleted!");
+
+    // Also remove from header navigation if present
+    try {
+      const settings = await fetchStoreSettings();
+      if (catToDelete && Array.isArray(settings.headerNav)) {
+        const catNameLower = catToDelete.name.toLowerCase();
+        const catIdLower = catToDelete.id.toLowerCase();
+        const filteredNav = settings.headerNav.filter((item) => {
+          const itemLower = item.name.toLowerCase();
+          const hrefLower = item.href.toLowerCase();
+          return (
+            itemLower !== catNameLower &&
+            !hrefLower.includes(encodeURIComponent(catNameLower)) &&
+            !hrefLower.includes(catNameLower) &&
+            item.id !== `nav-${catIdLower}`
+          );
+        });
+        if (filteredNav.length !== settings.headerNav.length) {
+          const updatedSettings = { ...settings, headerNav: filteredNav };
+          await saveStoredSettings(updatedSettings);
+        }
+      }
+    } catch (e) {}
+
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("dream_categories_updated", { detail: updatedList }));
+
+    showToast(`Category "${catName}" removed successfully! 🗑️`);
+  };
+
+  const handleClearAllCategories = async () => {
+    if (!confirm("Are you sure you want to remove ALL categories? This will delete all categories from database and homepage.")) return;
+
+    try {
+      for (const cat of categories) {
+        await supabase.from("categories").delete().eq("id", cat.id);
+      }
+    } catch (err) {
+      console.warn("Clear all categories error:", err);
+    }
+
+    setCategories([]);
+    localStorage.setItem("amropali_custom_categories", JSON.stringify([]));
+
+    try {
+      const settings = await fetchStoreSettings();
+      if (settings && Array.isArray(settings.headerNav)) {
+        const updatedSettings = { ...settings, headerNav: [] };
+        await saveStoredSettings(updatedSettings);
+      }
+    } catch (e) {}
+
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("dream_categories_updated", { detail: [] }));
+
+    showToast("All categories have been removed! 🗑️");
   };
 
   const filteredCategories = categories.filter(
@@ -232,13 +317,41 @@ export default function CategoriesAdminPage() {
           <p className="text-sm text-slate-500 mt-1 font-medium">Create, edit, & manage product categories shown on the homepage</p>
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="px-5 py-2.5 bg-gradient-to-r from-[#ea9219] to-[#f2b51d] text-[#1d0741] font-black text-sm rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 cursor-pointer transform hover:-translate-y-0.5"
-        >
-          <Plus className="w-5 h-5 stroke-[2.5]" />
-          <span>Add New Category</span>
-        </button>
+        <div className="flex items-center space-x-2.5 flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              fetchStoreSettings().then((s) => {
+                if (s?.popularCategory) setShowcaseForm(s.popularCategory);
+              });
+              setIsShowcaseModalOpen(true);
+            }}
+            className="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-[#ea9219] hover:text-[#d48212] font-bold text-xs sm:text-sm rounded-xl border border-amber-200/80 transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
+            title="Edit Homepage Popular Category Showcase Header"
+          >
+            <Flame className="w-4 h-4 text-[#ea9219]" />
+            <span>Edit Showcase Header</span>
+          </button>
+
+          {categories.length > 0 && (
+            <button
+              onClick={handleClearAllCategories}
+              className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs sm:text-sm rounded-xl border border-rose-200 transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
+              title="Remove all categories"
+            >
+              <Trash2 className="w-4 h-4 text-rose-600" />
+              <span>Clear All</span>
+            </button>
+          )}
+
+          <button
+            onClick={openAddModal}
+            className="px-5 py-2.5 bg-gradient-to-r from-[#ea9219] to-[#f2b51d] text-[#1d0741] font-black text-sm rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 cursor-pointer transform hover:-translate-y-0.5"
+          >
+            <Plus className="w-5 h-5 stroke-[2.5]" />
+            <span>Add New Category</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Content Table */}
@@ -311,16 +424,18 @@ export default function CategoriesAdminPage() {
                           <button
                             onClick={() => openEditModal(cat)}
                             title="Edit Category"
-                            className="p-2 text-slate-400 hover:text-[#ea9219] hover:bg-amber-50 rounded-lg transition cursor-pointer"
+                            className="px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:text-[#ea9219] bg-slate-50 hover:bg-amber-50 border border-slate-200 rounded-lg transition flex items-center space-x-1 cursor-pointer"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit className="w-3.5 h-3.5" />
+                            <span>Edit</span>
                           </button>
                           <button
                             onClick={() => handleDeleteCategory(cat.id)}
                             title="Delete Category"
-                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                            className="px-2.5 py-1.5 text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 rounded-lg transition flex items-center space-x-1 cursor-pointer"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
                           </button>
                         </div>
                       </td>
@@ -481,6 +596,134 @@ export default function CategoriesAdminPage() {
                 >
                   {editingCategory ? "Save Changes" : "Create Category"}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Popular Category Showcase Header Modal */}
+      {isShowcaseModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-purple-100 p-6 sm:p-8 relative">
+            <div className="flex items-center justify-between border-b border-purple-100 pb-4 mb-6">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-[#ea9219] flex items-center justify-center shrink-0">
+                  <Flame className="w-5 h-5 stroke-[2.2]" />
+                </div>
+                <div>
+                  <h2 className="text-lg sm:text-xl font-black text-[#1d0741]">
+                    Edit Showcase Header
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Homepage &quot;Popular Category&quot; Section
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShowcaseModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Live Mini Preview */}
+            <div className="mb-6 bg-slate-50 border border-slate-200/80 rounded-2xl p-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
+                Live Preview
+              </span>
+              <div className="flex items-center gap-3 bg-white p-3.5 rounded-xl border border-slate-100 shadow-2xs">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 text-[#4E1C80] flex items-center justify-center shrink-0">
+                  <Flame className="w-5 h-5 text-[#ea9219]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-slate-900 tracking-tight">
+                      {showcaseForm.title || "Popular Category"}
+                    </h3>
+                    {showcaseForm.badge ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200/60">
+                        {showcaseForm.badge}
+                      </span>
+                    ) : null}
+                  </div>
+                  {showcaseForm.subtitle ? (
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                      {showcaseForm.subtitle}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveShowcase} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Main Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Popular Category"
+                  value={showcaseForm.title}
+                  onChange={(e) => setShowcaseForm({ ...showcaseForm, title: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#ea9219]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Badge Pill Text <span className="text-slate-400 font-normal">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. জনপ্রিয় পণ্যসমূহ"
+                  value={showcaseForm.badge}
+                  onChange={(e) => setShowcaseForm({ ...showcaseForm, badge: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#ea9219]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Subtitle / Description
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. আম, খেজুর, লিচু ও অন্যান্য জনপ্রিয় ক্যাটাগরির সেরা পণ্যসমূহ"
+                  value={showcaseForm.subtitle}
+                  onChange={(e) => setShowcaseForm({ ...showcaseForm, subtitle: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#ea9219]"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-purple-100">
+                <button
+                  type="button"
+                  onClick={() => setShowcaseForm(defaultSettings.popularCategory)}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-700 underline cursor-pointer"
+                >
+                  Reset Defaults
+                </button>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsShowcaseModalOpen(false)}
+                    className="px-4 py-2 text-slate-600 hover:bg-slate-100 font-bold text-xs rounded-xl transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingShowcase}
+                    className="px-5 py-2 bg-gradient-to-r from-[#ea9219] to-[#f2b51d] text-[#1d0741] font-black text-xs rounded-xl shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-60"
+                  >
+                    {savingShowcase ? "Saving..." : "Save Showcase Header"}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

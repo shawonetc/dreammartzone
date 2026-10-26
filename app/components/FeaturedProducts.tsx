@@ -6,12 +6,28 @@ import { ChevronRight, Flame } from "lucide-react";
 import ProductCard from "./ProductCard";
 import { supabase } from "../lib/supabaseClient";
 import { ProductItem, getAllStoredProducts } from "../data/products";
+import {
+  PopularCategorySettings,
+  defaultSettings,
+  getStoredSettings,
+  fetchStoreSettings,
+} from "../data/settings";
 
 interface PopularCategorySectionProps {
   initialProducts?: ProductItem[];
+  initialPopularSettings?: PopularCategorySettings;
 }
 
-export default function PopularCategorySection({ initialProducts = [] }: PopularCategorySectionProps) {
+export default function PopularCategorySection({
+  initialProducts = [],
+  initialPopularSettings,
+}: PopularCategorySectionProps) {
+  const [popularConfig, setPopularConfig] = useState<PopularCategorySettings>(() => {
+    if (initialPopularSettings) return initialPopularSettings;
+    const s = getStoredSettings();
+    return s.popularCategory || defaultSettings.popularCategory;
+  });
+
   const [allProducts, setAllProducts] = useState<ProductItem[]>(() => {
     if (initialProducts && initialProducts.length > 0) return initialProducts;
     return getAllStoredProducts();
@@ -28,6 +44,36 @@ export default function PopularCategorySection({ initialProducts = [] }: Popular
     );
     return ["All", ...uniqueCats];
   });
+
+  useEffect(() => {
+    // Sync settings from database or local updates
+    const loadSettings = async () => {
+      try {
+        const fetched = await fetchStoreSettings();
+        if (fetched?.popularCategory) {
+          setPopularConfig(fetched.popularCategory);
+        }
+      } catch (err) {}
+    };
+    loadSettings();
+
+    const handleSettingsSync = (e?: any) => {
+      if (e?.detail?.popularCategory) {
+        setPopularConfig(e.detail.popularCategory);
+      } else {
+        const s = getStoredSettings();
+        if (s.popularCategory) setPopularConfig(s.popularCategory);
+      }
+    };
+
+    window.addEventListener("storage", handleSettingsSync);
+    window.addEventListener("dream_settings_updated", handleSettingsSync);
+
+    return () => {
+      window.removeEventListener("storage", handleSettingsSync);
+      window.removeEventListener("dream_settings_updated", handleSettingsSync);
+    };
+  }, []);
 
   useEffect(() => {
     // Only re-fetch if initialProducts were not provided by the server
@@ -103,15 +149,19 @@ export default function PopularCategorySection({ initialProducts = [] }: Popular
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
-                  Popular Category
+                  {popularConfig.title || defaultSettings.popularCategory.title}
                 </h2>
-                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200/60">
-                  জনপ্রিয় পণ্যসমূহ
-                </span>
+                {popularConfig.badge ? (
+                  <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200/60">
+                    {popularConfig.badge}
+                  </span>
+                ) : null}
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-                আম, খেজুর, লিচু ও অন্যান্য জনপ্রিয় ক্যাটাগরির সেরা পণ্যসমূহ
-              </p>
+              {popularConfig.subtitle ? (
+                <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+                  {popularConfig.subtitle}
+                </p>
+              ) : null}
             </div>
           </div>
 

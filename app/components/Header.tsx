@@ -20,8 +20,10 @@ import {
   LogOut,
 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
+import { defaultSettings, fetchStoreSettings, getStoredSettings, HeaderNavItem } from "../data/settings";
+import { getStoredCategories } from "../data/products";
 
-const navCategories = [
+const defaultNavCategories = [
   { name: "Mango", href: "/category/Mango", hasDropdown: false },
   { name: "Oil & Ghee", href: "/category/Oil & Ghee", hasDropdown: false },
   { name: "Honey", href: "/category/Honey", hasDropdown: false },
@@ -35,8 +37,6 @@ const navCategories = [
   { name: "Rice", href: "/category/Rice", hasDropdown: false },
 ];
 
-const headerCategories = navCategories.slice(0, 5); // Only display top 5 categories in the header bar
-
 export default function Header() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,34 +45,102 @@ export default function Header() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const { cartCount, setIsCartOpen } = useCart();
 
+  const [headerNav, setHeaderNav] = useState<HeaderNavItem[]>(() => {
+    const settings = getStoredSettings();
+    return Array.isArray(settings.headerNav) ? settings.headerNav : defaultSettings.headerNav;
+  });
+
+  const [dropdownCategories, setDropdownCategories] = useState<{ name: string; href: string }[]>(() => {
+    const localCats = getStoredCategories();
+    if (localCats && localCats.length > 0) {
+      return localCats.map((c) => ({
+        name: c.name,
+        href: `/category/${encodeURIComponent(c.name)}`,
+      }));
+    }
+    return defaultNavCategories;
+  });
+
   React.useEffect(() => {
+    let isMounted = true;
+
+    // Load auth user
     const fetchUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.email) {
+      if (session?.user?.email && isMounted) {
         setUserEmail(session.user.email);
       } else {
         const demoAuth = typeof window !== "undefined" && localStorage.getItem("dream_admin_auth");
-        if (demoAuth === "true") {
+        if (demoAuth === "true" && isMounted) {
           setUserEmail("Admin");
         }
       }
     };
     fetchUser();
 
+    // Load navigation items & categories
+    const loadNavigation = async () => {
+      try {
+        const settings = await fetchStoreSettings();
+        if (isMounted && settings && Array.isArray(settings.headerNav)) {
+          setHeaderNav(settings.headerNav);
+        }
+      } catch (err) {}
+
+      try {
+        const { data, error } = await supabase.from("categories").select("*");
+        if (!error && data && isMounted) {
+          setDropdownCategories(
+            data.map((c) => ({
+              name: c.name,
+              href: `/category/${encodeURIComponent(c.name)}`,
+            }))
+          );
+        }
+      } catch (err) {}
+    };
+    loadNavigation();
+
+    // Event listener for immediate sync across components / admin actions
+    const handleSyncEvent = () => {
+      if (!isMounted) return;
+      const current = getStoredSettings();
+      if (Array.isArray(current.headerNav)) {
+        setHeaderNav(current.headerNav);
+      }
+      const localCats = getStoredCategories();
+      if (localCats) {
+        setDropdownCategories(
+          localCats.map((c) => ({
+            name: c.name,
+            href: `/category/${encodeURIComponent(c.name)}`,
+          }))
+        );
+      }
+    };
+
+    window.addEventListener("storage", handleSyncEvent);
+    window.addEventListener("dream_settings_updated", handleSyncEvent);
+    window.addEventListener("dream_categories_updated", handleSyncEvent);
+
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user?.email) {
-        setUserEmail(session.user.email);
+        if (isMounted) setUserEmail(session.user.email);
       } else {
         const demoAuth = typeof window !== "undefined" && localStorage.getItem("dream_admin_auth");
         if (demoAuth === "true") {
-          setUserEmail("Admin");
+          if (isMounted) setUserEmail("Admin");
         } else {
-          setUserEmail(null);
+          if (isMounted) setUserEmail(null);
         }
       }
     });
 
     return () => {
+      isMounted = false;
+      window.removeEventListener("storage", handleSyncEvent);
+      window.removeEventListener("dream_settings_updated", handleSyncEvent);
+      window.removeEventListener("dream_categories_updated", handleSyncEvent);
       authListener?.subscription.unsubscribe();
     };
   }, []);
@@ -219,8 +287,8 @@ export default function Header() {
                   className="fixed inset-0 z-40 cursor-default" 
                   onClick={() => setIsCategoryMenuOpen(false)} 
                 />
-                <div className="absolute left-0 mt-2.5 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-2 text-slate-800 z-50 animate-fade-in">
-                  {navCategories.map((cat, idx) => (
+                <div className="absolute left-0 mt-2.5 w-60 bg-white rounded-xl shadow-xl border border-slate-100 py-2 text-slate-800 z-50 animate-fade-in max-h-96 overflow-y-auto">
+                  {dropdownCategories.map((cat, idx) => (
                     <Link
                       key={idx}
                       href={cat.href}
@@ -238,14 +306,13 @@ export default function Header() {
 
           {/* Category List */}
           <div className="flex items-center gap-5 sm:gap-6 py-1.5 overflow-x-auto scrollbar-none flex-1">
-            {headerCategories.map((cat, idx) => (
+            {headerNav.map((cat, idx) => (
               <Link
-                key={idx}
-                href={cat.href}
+                key={cat.id || idx}
+                href={cat.href || `/category/${encodeURIComponent(cat.name)}`}
                 className="flex items-center gap-1 whitespace-nowrap hover:text-amber-300 transition-colors py-0.5"
               >
                 <span>{cat.name}</span>
-                {cat.hasDropdown && <ChevronDown className="w-3 h-3 opacity-75" />}
               </Link>
             ))}
           </div>
@@ -258,7 +325,7 @@ export default function Header() {
           {/* Backdrop */}
           <div 
             className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300" 
-            onClick={() => setIsMobileMenuOpen(false)}
+            onClick={() => setIsMobileMenuOpen(false)} 
           />
           {/* Sidebar */}
           <div className="fixed inset-y-0 right-0 w-64 max-w-xs bg-white shadow-2xl flex flex-col h-full z-50 transform transition-transform duration-300">
@@ -272,7 +339,7 @@ export default function Header() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto py-2">
-              {navCategories.map((cat, idx) => (
+              {dropdownCategories.map((cat, idx) => (
                 <Link
                   key={idx}
                   href={cat.href}

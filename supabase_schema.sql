@@ -94,6 +94,14 @@ CREATE TABLE IF NOT EXISTS public.banners (
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 2.7 Store Settings Table (Global Contact Us & Q&A FAQs)
+CREATE TABLE IF NOT EXISTS public.store_settings (
+    id TEXT PRIMARY KEY DEFAULT 'main_settings',
+    settings JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- ==============================================================================
 -- 3. HELPER FUNCTIONS & TRIGGERS (Auto-sync camelCase & snake_case columns)
 -- ==============================================================================
@@ -294,6 +302,18 @@ CREATE POLICY "Allow all update banners" ON public.banners FOR UPDATE USING (tru
 
 DROP POLICY IF EXISTS "Allow all delete banners" ON public.banners;
 CREATE POLICY "Allow all delete banners" ON public.banners FOR DELETE USING (true);
+
+-- 5.7 Store Settings RLS
+ALTER TABLE public.store_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read store_settings" ON public.store_settings;
+CREATE POLICY "Allow public read store_settings" ON public.store_settings FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow all insert store_settings" ON public.store_settings;
+CREATE POLICY "Allow all insert store_settings" ON public.store_settings FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all update store_settings" ON public.store_settings;
+CREATE POLICY "Allow all update store_settings" ON public.store_settings FOR UPDATE USING (true);
 
 -- ==============================================================================
 -- 6. DEFAULT SEED DATA (Pre-populate with initial store products & categories)

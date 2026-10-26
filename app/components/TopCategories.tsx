@@ -13,35 +13,41 @@ interface TopCategoriesProps {
 
 export default function TopCategories({ initialCategories }: TopCategoriesProps) {
   const [categoriesList, setCategoriesList] = useState<CategoryItem[]>(() => {
-    if (initialCategories && initialCategories.length > 0) return initialCategories;
+    if (Array.isArray(initialCategories)) return initialCategories;
     return getStoredCategories();
   });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Only re-fetch if initialCategories were not provided by the server
-    if (!initialCategories || initialCategories.length === 0) {
+    if (!initialCategories) {
       fetchCategories();
     }
   }, [initialCategories]);
 
+  useEffect(() => {
+    const handleCategoryUpdate = () => {
+      fetchCategories();
+    };
+
+    window.addEventListener("storage", handleCategoryUpdate);
+    window.addEventListener("dream_categories_updated", handleCategoryUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleCategoryUpdate);
+      window.removeEventListener("dream_categories_updated", handleCategoryUpdate);
+    };
+  }, []);
+
   const fetchCategories = async () => {
-    const localCats = getStoredCategories();
     try {
       const { data, error } = await supabase.from("categories").select("*");
-      if (!error && data && data.length > 0) {
-        const merged = [...data];
-        localCats.forEach((lc) => {
-          if (!merged.some((c) => c.id === lc.id)) {
-            merged.push(lc);
-          }
-        });
-        setCategoriesList(merged);
+      if (!error && data) {
+        setCategoriesList(data);
       } else {
-        setCategoriesList(localCats);
+        setCategoriesList(getStoredCategories());
       }
     } catch (err) {
-      setCategoriesList(localCats);
+      setCategoriesList(getStoredCategories());
     }
   };
 

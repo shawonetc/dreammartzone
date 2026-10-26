@@ -1,6 +1,7 @@
 import { Metadata } from "next";
-import { getProductById } from "../../data/products";
+import { getProductById, normalizeProduct } from "../../data/products";
 import ProductDetailClient from "./ProductDetailClient";
+import { supabase } from "../../lib/supabaseClient";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -8,8 +9,19 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const resolvedParams = await params;
-  const product = getProductById(resolvedParams.id);
-  
+  let product: any = null;
+
+  try {
+    const { data } = await supabase.from("products").select("*").eq("id", resolvedParams.id).maybeSingle();
+    if (data) product = normalizeProduct(data);
+  } catch (e) {
+    // ignore
+  }
+
+  if (!product) {
+    product = getProductById(resolvedParams.id);
+  }
+
   if (!product) {
     return {
       title: "Product Not Found | Dream Mart",

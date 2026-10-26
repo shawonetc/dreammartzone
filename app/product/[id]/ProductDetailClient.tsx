@@ -6,7 +6,7 @@ import Link from "next/link";
 import Header from "../../components/Header";
 import FeaturesBanner from "../../components/FeaturesBanner";
 import Footer from "../../components/Footer";
-import { getProductById, allCombinedProducts, ProductItem } from "../../data/products";
+import { getProductById, allCombinedProducts, ProductItem, normalizeProduct } from "../../data/products";
 import ProductCard from "../../components/ProductCard";
 import { useCart } from "../../context/CartContext";
 import {
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "../../lib/supabaseClient";
+import { defaultSettings, fetchStoreSettings, getStoredSettings, StoreSettings } from "../../data/settings";
 
 interface ProductDetailClientProps {
   id: string;
@@ -27,22 +28,48 @@ interface ProductDetailClientProps {
 
 export default function ProductDetailClient({ id }: ProductDetailClientProps) {
   const [product, setProduct] = useState<ProductItem | undefined>(() => getProductById(id));
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => getStoredSettings());
+  const [loading, setLoading] = useState(() => !getProductById(id));
 
   useEffect(() => {
-    const fetchSingle = async () => {
-      const found = getProductById(id);
-      if (found) {
-        setProduct(found);
-        return;
-      }
+    let isMounted = true;
+    const loadData = async () => {
       try {
-        const { data } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
-        if (data) setProduct(data);
+        const [prodRes, settings] = await Promise.all([
+          supabase.from("products").select("*").eq("id", id).maybeSingle(),
+          fetchStoreSettings(),
+        ]);
+
+        if (isMounted) {
+          if (settings) {
+            setStoreSettings(settings);
+          }
+          if (!prodRes.error && prodRes.data) {
+            setProduct(normalizeProduct(prodRes.data));
+            setLoading(false);
+          } else {
+            const localProduct = getProductById(id);
+            if (localProduct) {
+              setProduct(localProduct);
+            }
+            setLoading(false);
+          }
+        }
       } catch (e) {
-        console.log("Not found");
+        if (isMounted) {
+          const localProduct = getProductById(id);
+          if (localProduct) {
+            setProduct(localProduct);
+          }
+          setLoading(false);
+        }
       }
     };
-    fetchSingle();
+
+    loadData();
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   const [quantity, setQuantity] = useState(1);
@@ -51,6 +78,21 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
   const [copied, setCopied] = useState(false);
   
   const { addToCart, setIsCartOpen } = useCart();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#F5F2F7] text-slate-800">
+        <Header />
+        <main className="flex-1 flex flex-col items-center justify-center p-8">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-4 border-[#4E1C80] border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm font-semibold text-slate-500">Loading product details...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -78,6 +120,15 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
   const rawList = product.images && product.images.length > 0 ? product.images : [mainCover];
   const imagesList = mainCover && !rawList.includes(mainCover) ? [mainCover, ...rawList] : rawList;
 
+  const contactInfo = {
+    heading: product.contact?.heading || storeSettings.contact.heading,
+    phone: product.contact?.phone || storeSettings.contact.phone,
+    email: product.contact?.email || storeSettings.contact.email,
+    whatsapp: product.contact?.whatsapp || storeSettings.contact.whatsapp,
+  };
+
+  const qaItems = (product.qa && product.qa.length > 0) ? product.qa : storeSettings.qaList;
+
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
       navigator.clipboard.writeText(window.location.href);
@@ -87,8 +138,10 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
   };
 
   const handleWhatsAppContact = () => {
+    const rawNumber = (contactInfo.whatsapp || "01834498477").replace(/\D/g, "");
+    const formatted = rawNumber.startsWith("01") ? `88${rawNumber}` : rawNumber;
     const text = encodeURIComponent(`Hi, I'm interested in "${product.name}" (Price: ৳${product.price}). Can you tell me more?`);
-    window.open(`https://wa.me/8801961363543?text=${text}`, "_blank");
+    window.open(`https://wa.me/${formatted}?text=${text}`, "_blank");
   };
 
   return (
@@ -302,38 +355,97 @@ export default function ProductDetailClient({ id }: ProductDetailClientProps) {
           <div className="text-slate-700 text-sm sm:text-base leading-relaxed">
             {activeTab === "description" && (
               <div className="flex flex-col gap-4">
-                <p className="font-semibold text-slate-800">
-                  {product.longDescription || product.name}
-                </p>
+                {product.longDescription ? (
+                  <div className="text-slate-700 font-medium leading-relaxed whitespace-pre-line space-y-3">
+                    {product.longDescription}
+                  </div>
+                ) : (
+                  <p className="font-semibold text-slate-800">
+                    {product.shortDescription || product.name}
+                  </p>
+                )}
+
                 {product.highlights && product.highlights.length > 0 && (
-                  <ul className="list-disc pl-5 flex flex-col gap-2.5 text-slate-600 font-medium">
-                    {product.highlights.map((highlight, idx) => (
-                      <li key={idx}>{highlight}</li>
-                    ))}
-                  </ul>
+                  <div className="mt-2 pt-4 border-t border-slate-100">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Key Highlights</h4>
+                    <ul className="flex flex-col gap-2.5">
+                      {product.highlights.map((highlight, idx) => (
+                        <li key={idx} className="flex items-start gap-2.5 text-slate-700 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-2 shrink-0" />
+                          <span>{highlight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             )}
 
             {activeTab === "contact" && (
-              <div className="flex flex-col gap-3 font-medium text-slate-600">
-                <p className="text-slate-800 font-bold">Have questions or want bulk orders?</p>
-                <p>Phone: <span className="text-slate-900 font-bold">01961363543</span></p>
-                <p>Email: <span className="text-slate-900 font-bold">info@demo21.com</span></p>
-                <p>WhatsApp: <span className="text-slate-900 font-bold">01961363543</span></p>
+              <div className="flex flex-col gap-4">
+                <p className="text-slate-900 font-bold text-base sm:text-lg">
+                  {contactInfo.heading}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Direct Call</span>
+                    <a
+                      href={`tel:${contactInfo.phone}`}
+                      className="text-base font-black text-slate-900 hover:text-[#4E1C80] transition-colors inline-block"
+                    >
+                      {contactInfo.phone}
+                    </a>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Email Address</span>
+                    <a
+                      href={`mailto:${contactInfo.email}`}
+                      className="text-base font-black text-slate-900 hover:text-[#4E1C80] transition-colors inline-block truncate max-w-full"
+                    >
+                      {contactInfo.email}
+                    </a>
+                  </div>
+
+                  <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-4">
+                    <span className="block text-xs font-bold text-emerald-800 uppercase tracking-wider mb-1">WhatsApp Chat</span>
+                    <button
+                      onClick={handleWhatsAppContact}
+                      className="text-base font-black text-emerald-700 hover:text-emerald-900 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>{contactInfo.whatsapp}</span>
+                      <span className="text-[11px] font-bold bg-[#25D366] text-white px-2 py-0.5 rounded-full">
+                        Chat
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
             {activeTab === "qa" && (
               <div className="flex flex-col gap-4 font-medium text-slate-600">
-                <div>
-                  <p className="font-bold text-slate-800 mb-1">Q1: How fresh are these fruits/products?</p>
-                  <p>A: We collect our products directly from our selected premium gardens and suppliers every day to ensure maximum freshness.</p>
-                </div>
-                <div className="border-t border-slate-100 pt-3">
-                  <p className="font-bold text-slate-800 mb-1">Q2: How long does the delivery take?</p>
-                  <p>A: Inside Dhaka, we deliver within 24 to 48 hours. Outside Dhaka, it takes around 2 to 3 days.</p>
-                </div>
+                {qaItems && qaItems.length > 0 ? (
+                  qaItems.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={`space-y-1.5 ${idx > 0 ? "border-t border-slate-100 pt-4" : ""}`}
+                    >
+                      <p className="font-bold text-slate-900 text-sm sm:text-base flex items-start gap-2">
+                        <span className="text-[#4E1C80] font-black shrink-0">Q{idx + 1}:</span>
+                        <span>{item.question}</span>
+                      </p>
+                      <p className="pl-6 text-slate-600 text-sm leading-relaxed">
+                        <span className="font-semibold text-slate-700">A: </span>
+                        {item.answer}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-6 text-center text-slate-400 italic">
+                    No FAQs available yet. Contact us if you have any questions!
+                  </div>
+                )}
               </div>
             )}
           </div>

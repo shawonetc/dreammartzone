@@ -10,6 +10,16 @@ export interface ProductItem {
   longDescription?: string;
   highlights?: string[];
   images?: string[];
+  contact?: {
+    heading?: string;
+    phone?: string;
+    email?: string;
+    whatsapp?: string;
+  };
+  qa?: {
+    question: string;
+    answer: string;
+  }[];
 }
 
 export const mangoProducts: ProductItem[] = [
@@ -504,11 +514,81 @@ export function getStoredCategories(): CategoryItem[] {
   return defaultCategories;
 }
 
+export function normalizeProduct(raw: any): ProductItem {
+  if (!raw) return raw;
+
+  let contact = raw.contact;
+  let qa = raw.qa;
+  const cleanHighlights: string[] = [];
+
+  const rawHighlights = Array.isArray(raw.highlights) ? raw.highlights : [];
+  for (const h of rawHighlights) {
+    if (typeof h === "string" && h.startsWith("__META__:")) {
+      try {
+        const meta = JSON.parse(h.substring(9));
+        if (meta.contact && !contact) contact = meta.contact;
+        if (meta.qa && !qa) qa = meta.qa;
+      } catch (e) {
+        // ignore JSON parse error
+      }
+    } else if (typeof h === "string") {
+      cleanHighlights.push(h);
+    }
+  }
+
+  return {
+    id: String(raw.id),
+    name: raw.name || "",
+    category: raw.category || "",
+    price: raw.price,
+    originalPrice: raw.originalPrice || raw.original_price,
+    image: raw.image || (raw.images && raw.images[0]) || "",
+    images: Array.isArray(raw.images) && raw.images.length > 0 ? raw.images : (raw.image ? [raw.image] : []),
+    brand: raw.brand || "Dream Mart",
+    shortDescription: raw.shortDescription || raw.short_description || "",
+    longDescription: raw.longDescription || raw.long_description || "",
+    highlights: cleanHighlights,
+    contact: contact,
+    qa: qa,
+  };
+}
+
+export function packProductForDb(item: ProductItem): any {
+  const packedHighlights = [...(item.highlights || [])];
+  if (item.contact || (item.qa && item.qa.length > 0)) {
+    packedHighlights.push(
+      "__META__:" +
+        JSON.stringify({
+          contact: item.contact,
+          qa: item.qa,
+        })
+    );
+  }
+
+  return {
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    price: String(item.price),
+    originalPrice: item.originalPrice ? String(item.originalPrice) : null,
+    original_price: item.originalPrice ? String(item.originalPrice) : null,
+    image: item.image,
+    images: item.images || [],
+    brand: item.brand || "Dream Mart",
+    shortDescription: item.shortDescription || "",
+    short_description: item.shortDescription || "",
+    longDescription: item.longDescription || "",
+    long_description: item.longDescription || "",
+    highlights: packedHighlights,
+  };
+}
+
 export function getCustomUserProducts(): ProductItem[] {
   if (typeof window === "undefined") return [];
   try {
     const customSaved = localStorage.getItem("amropali_custom_products");
-    return customSaved ? JSON.parse(customSaved) : [];
+    const parsed = customSaved ? JSON.parse(customSaved) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeProduct) : [];
   } catch (err) {
     return [];
   }
@@ -521,6 +601,7 @@ export function getAllStoredProducts(): ProductItem[] {
 export function getProductById(id: string): ProductItem | undefined {
   const custom = getCustomUserProducts();
   const foundCustom = custom.find((p) => String(p.id) === String(id));
-  if (foundCustom) return foundCustom;
-  return allCombinedProducts.find((p) => String(p.id) === String(id));
+  if (foundCustom) return normalizeProduct(foundCustom);
+  const foundDefault = allCombinedProducts.find((p) => String(p.id) === String(id));
+  return foundDefault ? normalizeProduct(foundDefault) : undefined;
 }
