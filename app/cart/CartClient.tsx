@@ -6,13 +6,39 @@ import Header from "../components/Header";
 import FeaturesBanner from "../components/FeaturesBanner";
 import Footer from "../components/Footer";
 import Image from "next/image";
-import { Trash2, ShoppingBag, Minus, Plus, Send, ArrowLeft } from "lucide-react";
+import {
+  Trash2,
+  ShoppingBag,
+  Minus,
+  Plus,
+  ArrowLeft,
+  CheckCircle2,
+  Copy,
+  Check,
+  ShieldCheck,
+  Loader2,
+  Truck
+} from "lucide-react";
 import { useCart } from "../context/CartContext";
-import { getStoredSettings } from "../data/settings";
+import { supabase } from "../lib/supabaseClient";
+
+interface PlacedOrderSummary {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  notes?: string;
+  total: number;
+  itemsSummary: string;
+}
 
 export default function CartClient() {
   const { cart, cartCount, cartTotal, updateQuantity, removeFromCart, clearCart } = useCart();
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [placedOrder, setPlacedOrder] = useState<PlacedOrderSummary | null>(null);
+  const [copied, setCopied] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -25,39 +51,120 @@ export default function CartClient() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const handleCopyOrderId = () => {
+    if (placedOrder?.id && typeof window !== "undefined") {
+      navigator.clipboard.writeText(placedOrder.id);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.phone || !formData.address) {
-      alert("Please fill in all required fields.");
+
+    if (!formData.name.trim() || !formData.phone.trim() || !formData.address.trim()) {
+      alert("Please fill in all required fields (Name, Phone, Address).");
       return;
     }
 
-    const orderItemsText = cart
-      .map((item) => `- ${item.name} (Qty: ${item.quantity}) - ৳${item.price * item.quantity}`)
-      .join("\n");
+    if (formData.phone.trim().length < 11) {
+      alert("Please enter a valid 11-digit Bangladeshi mobile number (e.g. 01XXXXXXXXX).");
+      return;
+    }
 
-    const message =
-      `*New Order from Dream Mart*\n\n` +
-      `*Customer Details:*\n` +
-      `- Name: ${formData.name}\n` +
-      `- Phone: ${formData.phone}\n` +
-      `- Address: ${formData.address}\n` +
-      `${formData.notes ? `- Notes: ${formData.notes}\n` : ""}\n` +
-      `*Order Details:*\n${orderItemsText}\n\n` +
-      `*Total Amount:* ৳${cartTotal}\n\n` +
-      `Thank you!`;
+    setIsSubmitting(true);
 
-    const encodedText = encodeURIComponent(message);
-    const storeNumber = (getStoredSettings().contact?.whatsapp || "01834498477").replace(/\D/g, "");
-    const formattedNumber = storeNumber.startsWith("01") ? `88${storeNumber}` : storeNumber;
-    window.open(`https://wa.me/${formattedNumber}?text=${encodedText}`, "_blank");
+    const randomNum = Math.floor(100000 + Math.random() * 900000);
+    const orderId = `#ORD-${randomNum}`;
+    const orderDate = new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
 
+    const itemsSummary = cart
+      .map((item) => `${item.name} × ${item.quantity}`)
+      .join(", ");
+
+    const currentTotal = cartTotal;
+
+    // 1. Create order object for local storage & state
+    const localOrderItem = {
+      id: orderId,
+      customer: formData.name.trim(),
+      phone: formData.phone.trim(),
+      address: formData.address.trim(),
+      product: itemsSummary,
+      amount: String(currentTotal),
+      status: "Pending" as const,
+      date: orderDate,
+      payment: "Cash on Delivery",
+      notes: formData.notes.trim() || "",
+      created_at: new Date().toISOString(),
+    };
+
+    // 2. Persist locally to amropali_custom_orders for instant Admin visibility
+    try {
+      const existing = localStorage.getItem("amropali_custom_orders");
+      const list = existing ? JSON.parse(existing) : [];
+      localStorage.setItem("amropali_custom_orders", JSON.stringify([localOrderItem, ...list]));
+      window.dispatchEvent(new Event("storage"));
+    } catch (err) {
+      console.error("Local storage order save error:", err);
+    }
+
+    // 3. Persist to Supabase Database (orders table & notifications table)
+    try {
+      await supabase.from("orders").insert([
+        {
+          id: orderId,
+          customer_name: formData.name.trim(),
+          customer_phone: formData.phone.trim(),
+          address: formData.address.trim(),
+          product: itemsSummary,
+          items: cart.map((i) => ({
+            id: i.id,
+            name: i.name,
+            quantity: i.quantity,
+            price: i.price,
+            image: i.image,
+          })),
+          total_amount: String(currentTotal),
+          amount: String(currentTotal),
+          status: "Pending",
+          payment_method: "Cash on Delivery",
+          notes: formData.notes.trim() || "",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ]);
+
+      await supabase.from("notifications").insert([
+        {
+          title: `New Order: ${orderId}`,
+          message: `${formData.name.trim()} placed an order for ৳${currentTotal} (${itemsSummary})`,
+          type: "order",
+          is_read: false,
+        },
+      ]);
+    } catch (dbErr) {
+      console.warn("Supabase order insert synced locally:", dbErr);
+    }
+
+    setPlacedOrder({
+      id: orderId,
+      name: formData.name.trim(),
+      phone: formData.phone.trim(),
+      address: formData.address.trim(),
+      notes: formData.notes.trim(),
+      total: currentTotal,
+      itemsSummary,
+    });
+
+    clearCart();
+    setFormData({ name: "", phone: "", address: "", notes: "" });
+    setIsSubmitting(false);
     setOrderPlaced(true);
-    setTimeout(() => {
-      clearCart();
-      setOrderPlaced(false);
-      setFormData({ name: "", phone: "", address: "", notes: "" });
-    }, 3000);
   };
 
   return (
@@ -74,21 +181,98 @@ export default function CartClient() {
 
         {/* Header */}
         <div className="flex items-center gap-3 pb-4 border-b border-slate-200/80 mb-8">
-          <ShoppingBag className="w-6 h-6 stroke-[2.2] text-slate-900" />
+          <ShoppingBag className="w-6 h-6 stroke-[2.2] text-[#4E1C80]" />
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
             Shopping Cart ({cartCount})
           </h1>
         </div>
 
-        {orderPlaced ? (
-          <div className="bg-white rounded-2xl border border-slate-200/60 p-12 text-center max-w-md mx-auto shadow-2xs mt-8">
-            <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 mb-4 mx-auto animate-bounce">
-              <Send className="w-8 h-8" />
+        {orderPlaced && placedOrder ? (
+          <div className="bg-white rounded-2xl border border-slate-200/60 p-8 sm:p-12 text-center max-w-lg mx-auto shadow-sm mt-4 animate-fadeIn">
+            <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 mb-4 mx-auto ring-8 ring-emerald-50/50">
+              <CheckCircle2 className="w-9 h-9" />
             </div>
-            <h2 className="text-xl font-bold text-slate-950 mb-2">Order Confirmed!</h2>
-            <p className="text-slate-500 text-sm">
-              We are opening WhatsApp to coordinate your delivery. Thanks for choosing Dream Mart!
+            
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full inline-block mb-3">
+              অর্ডার সফল হয়েছে
+            </span>
+
+            <h2 className="text-2xl font-black text-slate-950 mb-2">Order Confirmed!</h2>
+            <p className="text-slate-500 text-sm max-w-sm mx-auto leading-relaxed">
+              আপনার অর্ডারটি আমাদের অ্যাডমিন সিস্টেমে রেকর্ড করা হয়েছে। ডেলিভারি নিশ্চিত করতে আমাদের টিম শীঘ্রই যোগাযোগ করবে।
             </p>
+
+            {/* Order ID Pill */}
+            <div className="mt-6 w-full bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex items-center justify-between text-left">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                  Your Order ID
+                </span>
+                <span className="text-base font-black text-[#4E1C80]">
+                  {placedOrder.id}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopyOrderId}
+                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-emerald-700">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Copy ID</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Details Box */}
+            <div className="w-full mt-4 bg-slate-50/60 border border-slate-100 rounded-xl p-4 text-left text-xs space-y-2.5">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                <span className="text-slate-500 font-medium">Customer</span>
+                <span className="font-bold text-slate-900">{placedOrder.name}</span>
+              </div>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                <span className="text-slate-500 font-medium">Phone</span>
+                <span className="font-bold text-slate-900">{placedOrder.phone}</span>
+              </div>
+              <div className="flex items-start justify-between pb-2 border-b border-slate-200/60 gap-4">
+                <span className="text-slate-500 font-medium shrink-0">Address</span>
+                <span className="font-bold text-slate-900 text-right">{placedOrder.address}</span>
+              </div>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                <span className="text-slate-500 font-medium">Payment</span>
+                <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                  Cash on Delivery
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-slate-700 font-bold text-sm">Total Payable</span>
+                <span className="text-lg font-black text-slate-950">৳{placedOrder.total}</span>
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <Link
+                href="/track-order"
+                className="flex-1 py-3 bg-[#4E1C80] hover:bg-[#2D0C5F] text-white rounded-xl font-bold text-sm text-center shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Truck className="w-4 h-4" />
+                <span>Track Your Order</span>
+              </Link>
+              <Link
+                href="/"
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm text-center transition-colors cursor-pointer"
+              >
+                Continue Shopping
+              </Link>
+            </div>
           </div>
         ) : cart.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -161,7 +345,7 @@ export default function CartClient() {
               </div>
 
               {/* Continue Shopping Link */}
-              <Link href="/" className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-500 hover:text-emerald-700 transition-colors">
+              <Link href="/" className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-500 hover:text-[#4E1C80] transition-colors">
                 <ArrowLeft className="w-4 h-4" />
                 <span>Continue Shopping</span>
               </Link>
@@ -170,11 +354,26 @@ export default function CartClient() {
             {/* Right side: Checkout & Order Form (cols 5) */}
             <div className="lg:col-span-5">
               <div className="bg-white rounded-2xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.02)] p-6 flex flex-col gap-6">
-                <h2 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">
-                  Billing Details & Checkout
-                </h2>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Billing Details & Checkout
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    অর্ডার কনফার্ম করতে আপনার নাম, মোবাইল নম্বর এবং ঠিকানা দিন।
+                  </p>
+                </div>
 
-                <form onSubmit={handlePlaceOrder} className="flex flex-col gap-4">
+                <div className="bg-purple-50/70 border border-purple-200/70 rounded-xl p-3 text-xs text-[#2D0C5F] font-medium leading-relaxed flex items-start gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-[#4E1C80] shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block text-[#1d0741]">Cash on Delivery (ক্যাশ অন ডেলিভারি)</span>
+                    <span className="text-slate-600 text-[11px]">
+                      পণ্য হাতে পেয়ে চেক করে মূল্য পরিশোধ করবেন। সারা বাংলাদেশে ক্যাশ অন ডেলিভারি প্রযোজ্য।
+                    </span>
+                  </div>
+                </div>
+
+                <form id="cart-page-checkout-form" onSubmit={handlePlaceOrder} className="flex flex-col gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-bold text-slate-700">Recipient Name *</label>
                     <input
@@ -183,8 +382,8 @@ export default function CartClient() {
                       name="name"
                       value={formData.name}
                       onChange={handleInputChange}
-                      placeholder="Enter full name"
-                      className="w-full border border-slate-200 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-emerald-600"
+                      placeholder="আপনার পুরো নাম লিখুন"
+                      className="w-full border border-slate-200 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-[#4E1C80]"
                     />
                   </div>
 
@@ -197,7 +396,7 @@ export default function CartClient() {
                       value={formData.phone}
                       onChange={handleInputChange}
                       placeholder="e.g. 01XXXXXXXXX"
-                      className="w-full border border-slate-200 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-emerald-600"
+                      className="w-full border border-slate-200 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-[#4E1C80]"
                     />
                   </div>
 
@@ -209,8 +408,8 @@ export default function CartClient() {
                       rows={3}
                       value={formData.address}
                       onChange={handleInputChange}
-                      placeholder="Enter delivery address details"
-                      className="w-full border border-slate-200 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-emerald-600 resize-none"
+                      placeholder="রোড নম্বর, বাড়ি নম্বর, এলাকা বা জেলার নাম লিখুন"
+                      className="w-full border border-slate-200 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-[#4E1C80] resize-none"
                     />
                   </div>
 
@@ -221,8 +420,8 @@ export default function CartClient() {
                       name="notes"
                       value={formData.notes}
                       onChange={handleInputChange}
-                      placeholder="Any specific instructions..."
-                      className="w-full border border-slate-200 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-emerald-600"
+                      placeholder="Any specific delivery instructions..."
+                      className="w-full border border-slate-200 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-[#4E1C80]"
                     />
                   </div>
                 </form>
@@ -238,19 +437,29 @@ export default function CartClient() {
                     <span className="text-emerald-700 font-bold">FREE Delivery</span>
                   </div>
                   <div className="border-t border-slate-100 pt-3 flex justify-between items-center text-slate-900">
-                    <span className="text-sm font-bold">Total Amount</span>
-                    <span className="text-xl font-black">৳{cartTotal}</span>
+                    <span className="text-sm font-bold">Total Payable</span>
+                    <span className="text-xl font-black text-[#4E1C80]">৳{cartTotal}</span>
                   </div>
                 </div>
 
                 {/* Checkout Trigger */}
                 <button
                   type="submit"
-                  onClick={handlePlaceOrder}
-                  className="w-full py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-sm shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  form="cart-page-checkout-form"
+                  disabled={isSubmitting}
+                  className="w-full py-3.5 bg-[#4E1C80] hover:bg-[#2D0C5F] text-white rounded-xl font-bold text-sm shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>Place Order via WhatsApp</span>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>অর্ডার প্রক্রিয়াধীন...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Confirm Order (ক্যাশ অন ডেলিভারি)</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -263,11 +472,11 @@ export default function CartClient() {
             </div>
             <h2 className="text-xl font-bold text-slate-900 mb-2">Your cart is empty</h2>
             <p className="text-slate-500 text-sm mb-6">
-              You haven't added any products to your cart yet. Fill it with our fresh organic fruits!
+              You haven't added any products to your cart yet.
             </p>
             <Link
               href="/"
-              className="px-6 py-2.5 bg-emerald-700 text-white rounded-xl font-bold text-sm hover:bg-emerald-800 transition-colors inline-block"
+              className="px-6 py-2.5 bg-[#4E1C80] text-white rounded-xl font-bold text-sm hover:bg-[#2D0C5F] transition-colors inline-block"
             >
               Start Shopping
             </Link>

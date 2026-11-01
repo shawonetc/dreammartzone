@@ -1,22 +1,21 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../components/Header";
 import FeaturesBanner from "../components/FeaturesBanner";
 import Footer from "../components/Footer";
-import { Mail, Lock, LogIn, User, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Mail, Lock, LogIn, AlertCircle, CheckCircle2, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 
 export default function SignInClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTarget = searchParams.get("redirect") || "/admin";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [isLogin, setIsLogin] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -30,75 +29,41 @@ export default function SignInClient() {
     const trimmedEmail = email.trim();
 
     try {
-      if (isLogin) {
-        // Handle Sign In with Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: trimmedEmail,
-          password,
-        });
+      // Handle Sign In with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password,
+      });
 
-        if (error) {
-          // If auth error or fallback for demo admin@dreammart.com
-          if (trimmedEmail.toLowerCase() === "admin@dreammart.com") {
-            if (typeof window !== "undefined") {
-              localStorage.setItem("dream_admin_auth", "true");
-            }
-            setSuccessMessage("Admin login successful! Redirecting to Admin Dashboard...");
-            setTimeout(() => {
-              router.push(redirectTarget);
-            }, 1000);
-          } else {
-            let userFriendlyMsg = error.message || "Failed to sign in. Please check your credentials.";
-            if (error.message.includes("Email not confirmed")) {
-              userFriendlyMsg = "Email not confirmed! Supabase Dashboard > Authentication > Providers > Email এ গিয়ে 'Confirm email' বন্ধ (toggle off) করুন, অথবা আপনার ইনবক্স চেক করে ইমেল ভেরিফাই করুন।";
-            } else if (error.message.includes("Invalid login credentials")) {
-              userFriendlyMsg = "ভুল ইমেল বা পাসওয়ার্ড (Invalid credentials)। Supabase-এ দেওয়া সঠিক ইমেল ও পাসওয়ার্ড দিন।";
-            } else if (error.message.includes("Failed to fetch") || error.message.includes("fetch failed")) {
-              userFriendlyMsg = "Supabase সার্ভারে সংযোগ করা যাচ্ছে না। অনুগ্রহ করে ইন্টারনেট ও Supabase URL চেক করুন।";
-            }
-            setErrorMessage(userFriendlyMsg);
-          }
-        } else {
-          setSuccessMessage("Successfully signed in! Redirecting...");
+      if (error) {
+        // Fallback for demo admin credential
+        if (trimmedEmail.toLowerCase() === "admin@dreammart.com") {
           if (typeof window !== "undefined") {
             localStorage.setItem("dream_admin_auth", "true");
           }
+          setSuccessMessage("Admin login successful! Redirecting to Admin Dashboard...");
           setTimeout(() => {
             router.push(redirectTarget);
-          }, 1000);
-        }
-      } else {
-        // Handle Sign Up with Supabase
-        const { data, error } = await supabase.auth.signUp({
-          email: trimmedEmail,
-          password,
-          options: {
-            data: {
-              full_name: name.trim(),
-            },
-          },
-        });
-
-        if (error) {
-          let userFriendlyMsg = error.message;
-          if (error.message.includes("rate limit")) {
-            userFriendlyMsg = "ইমেইল লিমিট শেষ (Rate limit exceeded)। Supabase Dashboard-এ Authentication > Providers > Email থেকে 'Confirm email' বন্ধ করুন অথবা সরাসরি Authentication > Users থেকে User যোগ করুন।";
+          }, 800);
+        } else {
+          let userFriendlyMsg = error.message || "Failed to sign in. Please check your credentials.";
+          if (error.message.includes("Email not confirmed")) {
+            userFriendlyMsg = "Email not confirmed! Supabase Dashboard > Authentication > Providers > Email এ গিয়ে 'Confirm email' বন্ধ করুন, অথবা আপনার ইনবক্স চেক করে ইমেল ভেরিফাই করুন।";
+          } else if (error.message.includes("Invalid login credentials")) {
+            userFriendlyMsg = "ভুল ইমেল বা পাসওয়ার্ড (Invalid login credentials)। অনুগ্রহ করে সঠিক ইমেল ও পাসওয়ার্ড দিন।";
+          } else if (error.message.includes("Failed to fetch") || error.message.includes("fetch failed")) {
+            userFriendlyMsg = "Supabase সার্ভারে সংযোগ করা যাচ্ছে না। অনুগ্রহ করে ইন্টারনেট ও Supabase URL চেক করুন।";
           }
           setErrorMessage(userFriendlyMsg);
-        } else {
-          if (data?.session) {
-            setSuccessMessage("Account created & logged in! Redirecting...");
-            if (typeof window !== "undefined") {
-              localStorage.setItem("dream_admin_auth", "true");
-            }
-            setTimeout(() => {
-              router.push(redirectTarget);
-            }, 1000);
-          } else {
-            setSuccessMessage("Account created successfully! You can now sign in.");
-            setIsLogin(true);
-          }
         }
+      } else {
+        setSuccessMessage("Successfully signed in! Redirecting...");
+        if (typeof window !== "undefined") {
+          localStorage.setItem("dream_admin_auth", "true");
+        }
+        setTimeout(() => {
+          router.push(redirectTarget);
+        }, 800);
       }
     } catch (err: any) {
       setErrorMessage(err?.message || "An unexpected error occurred.");
@@ -114,41 +79,17 @@ export default function SignInClient() {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 flex items-center justify-center">
         {/* Authentication Card */}
         <div className="bg-white rounded-2xl border border-purple-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sm:p-8 max-w-md w-full">
-
-          {/* Tabs header */}
-          <div className="flex border-b border-slate-100 mb-6">
-            <button
-              onClick={() => {
-                setIsLogin(true);
-                setErrorMessage("");
-                setSuccessMessage("");
-              }}
-              className={`flex-1 pb-3 text-sm sm:text-base font-bold transition-all border-b-2 cursor-pointer ${isLogin ? "border-[#4E1C80] text-[#4E1C80]" : "border-transparent text-slate-400 hover:text-slate-600"
-                }`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => {
-                setIsLogin(false);
-                setErrorMessage("");
-                setSuccessMessage("");
-              }}
-              className={`flex-1 pb-3 text-sm sm:text-base font-bold transition-all border-b-2 cursor-pointer ${!isLogin ? "border-[#4E1C80] text-[#4E1C80]" : "border-transparent text-slate-400 hover:text-slate-600"
-                }`}
-            >
-              Create Account
-            </button>
-          </div>
-
-          <div className="mb-6">
-            <h2 className="text-xl font-black text-[#1d0741] mb-1.5">
-              {isLogin ? "Welcome back to Dream Mart" : "Create your Dream Mart Account"}
-            </h2>
-            <p className="text-xs text-slate-500 font-medium">
-              {isLogin
-                ? "Sign in using your Supabase credentials to access order tracking & admin control."
-                : "Register a new user account with your email."}
+          
+          {/* Card Header */}
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-[#4E1C80] mb-3.5 shadow-2xs border border-purple-100">
+              <ShieldCheck className="w-7 h-7" />
+            </div>
+            <h1 className="text-2xl font-black text-[#1d0741] tracking-tight">
+              Sign In to Dream Mart
+            </h1>
+            <p className="text-xs text-slate-500 font-medium mt-1">
+              অ্যাডমিন প্যানেল ও ড্যাশবোর্ডে প্রবেশ করতে আপনার তথ্য দিন।
             </p>
           </div>
 
@@ -167,7 +108,7 @@ export default function SignInClient() {
               <button
                 type="button"
                 onClick={() => setErrorMessage("")}
-                className="text-rose-400 hover:text-rose-600 p-1"
+                className="text-rose-400 hover:text-rose-600 p-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -188,34 +129,15 @@ export default function SignInClient() {
               <button
                 type="button"
                 onClick={() => setSuccessMessage("")}
-                className="text-emerald-400 hover:text-emerald-600 p-1"
+                className="text-emerald-400 hover:text-emerald-600 p-1 cursor-pointer"
               >
                 ✕
               </button>
             </div>
           )}
 
-          {/* Form */}
+          {/* Sign In Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {!isLogin && (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-slate-700">Full Name</label>
-                <div className="relative flex items-center">
-                  <span className="absolute left-3 text-slate-400">
-                    <User className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Enter your name"
-                    className="w-full border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-sm focus:outline-none focus:border-[#4E1C80]"
-                  />
-                </div>
-              </div>
-            )}
-
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-slate-700">Email Address</label>
               <div className="relative flex items-center">
@@ -236,24 +158,26 @@ export default function SignInClient() {
             <div className="flex flex-col gap-1">
               <div className="flex justify-between items-center">
                 <label className="text-xs font-bold text-slate-700">Password</label>
-                {isLogin && (
-                  <a href="#" className="text-xs text-[#ea9219] hover:underline font-bold">
-                    Forgot?
-                  </a>
-                )}
               </div>
               <div className="relative flex items-center">
                 <span className="absolute left-3 text-slate-400">
                   <Lock className="w-4 h-4" />
                 </span>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-sm focus:outline-none focus:border-[#4E1C80]"
+                  className="w-full border border-slate-200 rounded-xl pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#4E1C80]"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -263,7 +187,7 @@ export default function SignInClient() {
               className="w-full mt-2 py-3 bg-[#4E1C80] hover:bg-[#2D0C5F] text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <LogIn className="w-4 h-4" />
-              <span>{loading ? "Processing..." : isLogin ? "Sign In " : "Create Account"}</span>
+              <span>{loading ? "Signing in..." : "Sign In"}</span>
             </button>
           </form>
         </div>

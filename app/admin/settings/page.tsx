@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Save,
   Phone,
@@ -362,7 +363,15 @@ export default function SettingsAdminPage() {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3 shrink-0">
+        <div className="flex items-center space-x-3 shrink-0 flex-wrap gap-2">
+          <Link
+            href="/admin/pages"
+            className="px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-[#4E1C80] font-bold text-xs sm:text-sm rounded-xl border border-purple-200 transition flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+          >
+            <FileText className="w-4 h-4 text-purple-700" />
+            <span>Pages CMS (Edit 9 Pages)</span>
+          </Link>
+
           <button
             type="button"
             onClick={handleResetDefaults}

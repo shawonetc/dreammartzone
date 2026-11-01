@@ -21,7 +21,8 @@ import {
   FolderTree,
   ShieldAlert,
   Loader2,
-  SlidersHorizontal
+  SlidersHorizontal,
+  FileText
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -97,6 +98,7 @@ export default function AdminLayout({
     { name: "Categories", href: "/admin/categories", icon: FolderTree, category: "MANAGEMENT" },
     { name: "Products", href: "/admin/products", icon: Package, category: "MANAGEMENT" },
     { name: "Hero Banners", href: "/admin/banners", icon: SlidersHorizontal, category: "MANAGEMENT" },
+    { name: "Pages CMS", href: "/admin/pages", icon: FileText, category: "MANAGEMENT" },
     { name: "Orders", href: "/admin/orders", icon: ShoppingBag, category: "MANAGEMENT" },
     { name: "Users", href: "/admin/users", icon: Users, category: "MANAGEMENT" },
     { name: "Notifications", href: "/admin/notifications", icon: Bell, category: "SYSTEM" },

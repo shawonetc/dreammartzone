@@ -3,8 +3,8 @@ import { Suspense } from "react";
 import SignInClient from "./SignInClient";
 
 export const metadata: Metadata = {
-  title: "Sign In / Register | Dream Mart",
-  description: "Sign in or create a new account at Dream Mart to track your organic grocery orders, manage your wishlist, and save your shopping cart.",
+  title: "Sign In | Dream Mart",
+  description: "Sign in to Dream Mart to access order management and admin dashboard.",
 };
 
 export default function Page() {

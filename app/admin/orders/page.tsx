@@ -53,43 +53,98 @@ export default function OrdersAdminPage() {
 
   useEffect(() => {
     fetchOrders();
+
+    const handleStorageChange = () => {
+      fetchOrders();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    const channel = supabase
+      .channel("admin-orders-list-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    const pollTimer = setInterval(() => {
+      fetchOrders();
+    }, 4000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      supabase.removeChannel(channel);
+      clearInterval(pollTimer);
+    };
   }, []);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from("orders").select("*");
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: false });
       
       const savedLocal = localStorage.getItem("amropali_custom_orders");
       const localOrders: OrderItem[] = savedLocal ? JSON.parse(savedLocal) : [];
 
+      const mergedMap = new Map<string, any>();
+
       if (!error && data && data.length > 0) {
-        const formatted: OrderItem[] = data.map((o: any) => ({
-          id: String(o.id).startsWith("#") ? o.id : `#ORD-${o.id}`,
-          customer: o.customer_name || "Customer",
-          phone: o.customer_phone || "N/A",
-          address: o.address || "Dhaka, Bangladesh",
-          product: Array.isArray(o.items) ? o.items.map((i: any) => i.name).join(", ") : (o.product || "Organic Product"),
-          amount: String(o.total_amount || o.amount || "0").replace("৳", "").trim(),
-          status: o.status || "Processing",
-          date: o.created_at ? new Date(o.created_at).toLocaleDateString("en-GB") : "Today",
-          payment: o.payment_method || "Cash on Delivery",
-          notes: o.notes || "",
-        }));
-
-        // Merge Supabase orders with custom local orders
-        const merged = [...formatted];
-        localOrders.forEach((lo) => {
-          if (!merged.some((m) => m.id === lo.id)) {
-            merged.unshift(lo);
-          }
+        data.forEach((o: any) => {
+          const cleanId = String(o.id).replace(/^[#\s]*(ORD-?)*/i, "");
+          const formattedId = `#ORD-${cleanId}`;
+          mergedMap.set(formattedId, {
+            id: formattedId,
+            customer: o.customer_name || "Customer",
+            phone: o.customer_phone || "N/A",
+            address: o.address || "Dhaka, Bangladesh",
+            product: Array.isArray(o.items) ? o.items.map((i: any) => `${i.name} × ${i.quantity || 1}`).join(", ") : (o.product || "Organic Product"),
+            amount: String(o.total_amount || o.amount || "0").replace("৳", "").trim(),
+            status: o.status || "Pending",
+            date: o.created_at ? new Date(o.created_at).toLocaleDateString("en-GB") : "Today",
+            payment: o.payment_method || "Cash on Delivery",
+            notes: o.notes || "",
+            created_at: o.created_at || new Date().toISOString(),
+          });
         });
-
-        setOrders(merged);
         setIsLive(true);
-      } else {
-        setOrders(localOrders.length > 0 ? localOrders : fallbackOrders);
       }
+
+      // Merge custom local orders
+      localOrders.forEach((lo: any) => {
+        const cleanId = String(lo.id).replace(/^[#\s]*(ORD-?)*/i, "");
+        const formattedId = `#ORD-${cleanId}`;
+        if (!mergedMap.has(formattedId)) {
+          mergedMap.set(formattedId, {
+            ...lo,
+            id: formattedId,
+            status: lo.status || "Pending",
+            created_at: lo.created_at || new Date().toISOString(),
+          });
+        }
+      });
+
+      let finalOrders = Array.from(mergedMap.values());
+
+      if (finalOrders.length === 0) {
+        finalOrders = fallbackOrders;
+      } else {
+        // ALWAYS sort descending so newest order is at the top
+        finalOrders.sort((a: any, b: any) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          if (timeA !== timeB) return timeB - timeA;
+          return String(b.id).localeCompare(String(a.id));
+        });
+      }
+
+      setOrders(finalOrders);
     } catch (err) {
       console.log("Fallback to local orders data");
       const savedLocal = localStorage.getItem("amropali_custom_orders");

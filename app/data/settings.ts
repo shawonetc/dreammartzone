@@ -61,7 +61,7 @@ export const defaultFooterSettings: FooterSettings = {
   email: "dreammarthouse@gmail.com",
   importantLinksTitle: "Important Links",
   importantLinks: [
-    { id: "imp-1", label: "Blog", url: "/blog" },
+    { id: "imp-1", label: "Blog & News", url: "/blog" },
     { id: "imp-2", label: "About Us", url: "/about" },
     { id: "imp-3", label: "Contact Us", url: "/contact" },
     { id: "imp-4", label: "Terms and Conditions", url: "/terms" },

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   PhoneCall,
   Lock,
@@ -208,12 +209,12 @@ export default function Footer() {
             <ul className="flex flex-col gap-2 text-xs text-slate-300">
               {(footerConfig.importantLinks || []).map((link, idx) => (
                 <li key={link.id || idx}>
-                  <a
+                  <Link
                     href={link.url || "#"}
                     className="hover:text-white transition-colors"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -227,12 +228,12 @@ export default function Footer() {
             <ul className="flex flex-col gap-2 text-xs text-slate-300">
               {(footerConfig.customerServiceLinks || []).map((link, idx) => (
                 <li key={link.id || idx}>
-                  <a
+                  <Link
                     href={link.url || "#"}
                     className="hover:text-white transition-colors"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>

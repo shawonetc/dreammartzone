@@ -22,6 +22,35 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/fssfwfef",
+        destination: "/returns",
+        permanent: false,
+      },
+      {
+        source: "/return-policy",
+        destination: "/returns",
+        permanent: false,
+      },
+      {
+        source: "/faqs",
+        destination: "/faq",
+        permanent: false,
+      },
+      {
+        source: "/qna",
+        destination: "/faq",
+        permanent: false,
+      },
+      {
+        source: "/Q&A",
+        destination: "/faq",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
